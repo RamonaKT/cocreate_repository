@@ -7,8 +7,10 @@ let allNodes = [];
 let allConnections = [];
 let selectedNode = null;
 
+let selectedConnection = null; // --- neu ---
+
 const getCSSColor = (level) =>
-  getComputedStyle(document.documentElement).getPropertyValue(`--color-level-${level}`).trim();
+    getComputedStyle(document.documentElement).getPropertyValue(`--color-level-${level}`).trim();
 
 const nodeStyles = {
   1: { r: 60, color: getCSSColor(1), label: 'Ebene 1', fontSize: 16 },
@@ -59,8 +61,6 @@ function createDraggableNode(x, y, type) {
   circle.setAttribute("fill", style.color);
   group.appendChild(circle);
 
-
-
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
   text.setAttribute("x", 0);
   text.setAttribute("y", 0);
@@ -68,10 +68,8 @@ function createDraggableNode(x, y, type) {
   text.setAttribute("font-size", style.fontSize);
   text.setAttribute("text-anchor", "middle");
   text.setAttribute("alignment-baseline", "middle");
-  text.textContent = "-";
+  text.textContent = "...";  // <-- leer statt "-"
   group.appendChild(text);
-
-
 
   allNodes.push({ id, group, x, y, r: style.r });
 
@@ -98,6 +96,13 @@ function createDraggableNode(x, y, type) {
   // Verbindung-Handler
   group.addEventListener('click', e => {
     e.stopPropagation();
+
+    // Wenn eine Verbindung ausgewählt ist, diese deselecten
+    if (selectedConnection) {
+      selectedConnection.classList.remove('highlighted');
+      selectedConnection = null;
+    }
+
     if (selectedNode === null) {
       selectedNode = id;
       highlightNode(id, true);
@@ -195,6 +200,11 @@ svg.addEventListener('click', () => {
     highlightNode(selectedNode, false);
     selectedNode = null;
   }
+  // Deselektiere Verbindungslinie auch
+  if (selectedConnection) {
+    selectedConnection.classList.remove('highlighted');
+    selectedConnection = null;
+  }
 });
 
 // Verbindung aktualisieren bei Bewegung
@@ -225,6 +235,25 @@ function connectNodes(fromId, toId) {
   line.setAttribute("stroke-width", "4");
   line.setAttribute("class", "connection-line");
 
+  // --- neu --- Klick zum Auswählen und Hervorheben der Linie
+  line.addEventListener("click", e => {
+    e.stopPropagation();
+
+    // Node Auswahl entfernen
+    if (selectedNode !== null) {
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    }
+
+    // Vorherige Verbindungsauswahl entfernen
+    if (selectedConnection) {
+      selectedConnection.classList.remove("highlighted");
+    }
+
+    selectedConnection = line;
+    selectedConnection.classList.add("highlighted");
+  });
+
   // Event zum Löschen der Linie per Rechtsklick
   line.addEventListener("contextmenu", e => {
     e.preventDefault();
@@ -232,6 +261,9 @@ function connectNodes(fromId, toId) {
     svg.removeChild(line);
     // Aus Verbindungsarray löschen
     allConnections = allConnections.filter(conn => conn.line !== line);
+
+    // Falls ausgewählt, Auswahl aufheben
+    if (selectedConnection === line) selectedConnection = null;
   });
 
   svg.insertBefore(line, svg.firstChild); // unter die Knoten legen
@@ -240,32 +272,43 @@ function connectNodes(fromId, toId) {
 
 // Keydown-Listener für Löschen
 document.addEventListener('keydown', (e) => {
-  // Prüfe, ob eine Node ausgewählt ist und ob Entf oder Backspace gedrückt wurde
-  if (selectedNode && (e.key === 'Delete' || e.key === 'Backspace')) {
+  // Wenn gerade ein Input-Element aktiv ist, nichts löschen
+  const activeElement = document.activeElement;
+  if (activeElement && (
+      activeElement.tagName === "INPUT" ||
+      activeElement.tagName === "TEXTAREA" ||
+      activeElement.isContentEditable
+  )) {
+    return; // Eingabe läuft, nicht löschen
+  }
+
+  if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
 
-    // Finde den ausgewählten Node
-    const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
-    if (nodeIndex === -1) return;
+    if (selectedConnection) {
+      svg.removeChild(selectedConnection);
+      allConnections = allConnections.filter(conn => conn.line !== selectedConnection);
+      selectedConnection = null;
+      return;
+    }
 
-    const node = allNodes[nodeIndex];
+    if (selectedNode) {
+      const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
+      if (nodeIndex === -1) return;
 
-    // Entferne alle Verbindungen, die zu oder von diesem Node führen
-    allConnections = allConnections.filter(conn => {
-      if (conn.fromId === selectedNode || conn.toId === selectedNode) {
-        svg.removeChild(conn.line);
-        return false; // raus aus dem Array
-      }
-      return true;
-    });
+      const node = allNodes[nodeIndex];
 
-    // Entferne den Node (g-Gruppe) aus dem SVG
-    svg.removeChild(node.group);
+      allConnections = allConnections.filter(conn => {
+        if (conn.fromId === selectedNode || conn.toId === selectedNode) {
+          svg.removeChild(conn.line);
+          return false;
+        }
+        return true;
+      });
 
-    // Entferne den Node aus allNodes
-    allNodes.splice(nodeIndex, 1);
-
-    // Auswahl zurücksetzen
-    selectedNode = null;
+      svg.removeChild(node.group);
+      allNodes.splice(nodeIndex, 1);
+      selectedNode = null;
+    }
   }
 });
