@@ -203,7 +203,7 @@ function connectNodes(fromId, toId) {
   line.setAttribute("x2", to.x);
   line.setAttribute("y2", to.y);
   line.setAttribute("stroke", "#888");
-  line.setAttribute("stroke-width", "2");
+  line.setAttribute("stroke-width", "4");
   line.setAttribute("class", "connection-line");
 
   // Event zum Löschen der Linie per Rechtsklick
