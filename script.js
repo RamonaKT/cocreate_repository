@@ -11,9 +11,9 @@ const getCSSColor = (level) =>
   getComputedStyle(document.documentElement).getPropertyValue(`--color-level-${level}`).trim();
 
 const nodeStyles = {
-  1: { r: 50, color: getCSSColor(1), label: 'Ebene 1' },
-  2: { r: 40, color: getCSSColor(2), label: 'Ebene 2' },
-  3: { r: 30, color: getCSSColor(3), label: 'Ebene 3' }
+  1: { r: 60, color: getCSSColor(1), label: 'Ebene 1', fontSize: 16 },
+  2: { r: 50, color: getCSSColor(2), label: 'Ebene 2' , fontSize: 14 },
+  3: { r: 40, color: getCSSColor(3), label: 'Ebene 3', fontSize: 12 },
 };
 
 
@@ -62,11 +62,11 @@ function createDraggableNode(x, y, type) {
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
   text.setAttribute("x", 0);
   text.setAttribute("y", 0);
-  text.setAttribute("fill", "white");
-  text.setAttribute("font-size", "12");
+  text.setAttribute("fill", "black");
+  text.setAttribute("font-size", style.fontSize);
   text.setAttribute("text-anchor", "middle");
   text.setAttribute("alignment-baseline", "middle");
-  text.textContent = style.label;
+  text.textContent = "punkt";
   group.appendChild(text);
 
   allNodes.push({ id, group, x, y, r: style.r });
@@ -108,34 +108,47 @@ function createDraggableNode(x, y, type) {
   });
 
   // ✍️ Doppelklick zum Umbenennen (SVG-intern, transparent)
+  // ✍️ Doppelklick zum Umbenennen (SVG-intern, transparent)
   text.addEventListener('dblclick', e => {
     e.stopPropagation();
 
+    // Doppelt öffnen verhindern
+    if (group.querySelector('foreignObject')) return;
+
     const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
-    fo.setAttribute("x", -40);
+    fo.setAttribute("x", -style.r);
     fo.setAttribute("y", -10);
-    fo.setAttribute("width", 80);
+    fo.setAttribute("width", style.r * 2);
     fo.setAttribute("height", 20);
 
     const input = document.createElement("input");
     input.setAttribute("type", "text");
     input.setAttribute("value", text.textContent);
+    input.setAttribute("placeholder", "Name eingeben");
 
     fo.appendChild(input);
     group.appendChild(fo);
+
     input.focus();
+    input.setSelectionRange(input.value.length, input.value.length); // Cursor ans Ende
+
 
     const save = () => {
-      text.textContent = input.value;
+      const value = input.value.trim();
+      if (value) {
+        text.textContent = value;
+      }
       group.removeChild(fo);
     };
 
     input.addEventListener("blur", save);
+
     input.addEventListener("keydown", e => {
       if (e.key === "Enter") save();
       else if (e.key === "Escape") group.removeChild(fo);
     });
   });
+
 }
 
 function highlightNode(id, on) {

@@ -1,3 +1,4 @@
+/*Die Toolbar mit den Items zum ziehen*/
 #toolbar {
     display: flex;
     justify-content: center;
@@ -13,8 +14,8 @@
     width: 7vh;
     height: 5vh;
     border-radius: 15px;
-    border: 1px solid black;
-    color: white;
+    border: 2px solid black;
+    color: black;
     line-height: 40px;
     cursor: grab;
     user-select: none;
@@ -31,32 +32,18 @@
     background: var(--color-level-3);
 }
 
+
+
+/*Mindmap mit Arbeitsflächen*/
+
 #mindmap-container {
     display: flex;
     justify-content: center;
     margin-top: 20px;
     height: 80vh;
-    /*background-color: #888888;*/
-
-}
-#sidebar-right, #sidebar-left {
-    width: 25vh;
-    background: #f8f8f8;
-    border: 1px solid #ccc;
-    padding: 10px;
-    text-align: left;
-    overflow-y: auto;
-    font-size: 14px;
-    font-family: sans-serif;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    /*margin-bottom: 2vh;*/
-    margin-top: 3vh;
 }
 
-#sidebar-right {
-    margin-left: 10px;
-    height: 67.7vh;
-}
+
 #mindmap{
     height: 100%;
     width: 100%;
@@ -81,7 +68,7 @@ svg {
 
 .draggable circle.highlighted {
     stroke: yellow;
-    stroke-width: 2;
+    stroke-width: 6;
 }
 
 foreignObject input {
@@ -97,4 +84,25 @@ foreignObject input {
     font-family: sans-serif;
     outline: none;
     border-radius: 20px;
+}
+
+/*Sidebars allgemein und Cache aber nicht Navigationbereich -> siehe navigation.css*/
+
+#sidebar-right, #sidebar-left {
+    width: 25vh;
+    background: #f8f8f8;
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left;
+    overflow-y: auto;
+    font-size: 14px;
+    font-family: sans-serif;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    /*margin-bottom: 2vh;*/
+    margin-top: 3vh;
+}
+
+#sidebar-right {
+    margin-left: 10px;
+    height: 67.7vh;
 }
