@@ -237,3 +237,35 @@ function connectNodes(fromId, toId) {
   svg.insertBefore(line, svg.firstChild); // unter die Knoten legen
   allConnections.push({ fromId, toId, line });
 }
+
+// Keydown-Listener für Löschen
+document.addEventListener('keydown', (e) => {
+  // Prüfe, ob eine Node ausgewählt ist und ob Entf oder Backspace gedrückt wurde
+  if (selectedNode && (e.key === 'Delete' || e.key === 'Backspace')) {
+    e.preventDefault();
+
+    // Finde den ausgewählten Node
+    const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
+    if (nodeIndex === -1) return;
+
+    const node = allNodes[nodeIndex];
+
+    // Entferne alle Verbindungen, die zu oder von diesem Node führen
+    allConnections = allConnections.filter(conn => {
+      if (conn.fromId === selectedNode || conn.toId === selectedNode) {
+        svg.removeChild(conn.line);
+        return false; // raus aus dem Array
+      }
+      return true;
+    });
+
+    // Entferne den Node (g-Gruppe) aus dem SVG
+    svg.removeChild(node.group);
+
+    // Entferne den Node aus allNodes
+    allNodes.splice(nodeIndex, 1);
+
+    // Auswahl zurücksetzen
+    selectedNode = null;
+  }
+});
