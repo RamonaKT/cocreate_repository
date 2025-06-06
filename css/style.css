@@ -9,6 +9,7 @@ body {
   font-family: Arial, sans-serif;
   background: #f0f0f0;
   text-align: center;
+  background: linear-gradient(to right, #9e78e9, #9eedf0);
 }
 .header {
   display: flex;
@@ -39,6 +40,7 @@ h1 {
   padding: 10px;
   background: #ddd;
   border-bottom: 2px solid #bbb;
+  height: 5vh;
 }
 
 .node-template {
@@ -66,7 +68,8 @@ h1 {
   display: flex;
   justify-content: center;
   margin-top: 20px;
-  background-color: #888888;
+  height: 80vh;
+  /*background-color: #888888;*/
 
 }
 #sidebar-right, #sidebar-left {
@@ -79,19 +82,19 @@ h1 {
   font-size: 14px;
   font-family: sans-serif;
   box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-  margin-bottom: 2vh;
+  /*margin-bottom: 2vh;*/
   margin-top: 3vh;
 }
 #sidebar-left {
   margin-right: 10px;
-  height: 78vh;
+  height: 67.7vh;
 }
 #sidebar-right {
   margin-left: 10px;
   height: 67.7vh;
 }
 #mindmap{
-  height: 70vh;
+  height: 100%;
   width: 100%;
   margin-top: 3vh;
   border: 2px solid black;
