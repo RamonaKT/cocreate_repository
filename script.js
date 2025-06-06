@@ -59,6 +59,8 @@ function createDraggableNode(x, y, type) {
   circle.setAttribute("fill", style.color);
   group.appendChild(circle);
 
+
+
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
   text.setAttribute("x", 0);
   text.setAttribute("y", 0);
@@ -66,8 +68,10 @@ function createDraggableNode(x, y, type) {
   text.setAttribute("font-size", style.fontSize);
   text.setAttribute("text-anchor", "middle");
   text.setAttribute("alignment-baseline", "middle");
-  text.textContent = "punkt";
+  text.textContent = "-";
   group.appendChild(text);
+
+
 
   allNodes.push({ id, group, x, y, r: style.r });
 
@@ -107,7 +111,7 @@ function createDraggableNode(x, y, type) {
     }
   });
 
-  // ✍️ Doppelklick zum Umbenennen (SVG-intern, transparent)
+
   // ✍️ Doppelklick zum Umbenennen (SVG-intern, transparent)
   text.addEventListener('dblclick', e => {
     e.stopPropagation();
@@ -124,7 +128,7 @@ function createDraggableNode(x, y, type) {
     const input = document.createElement("input");
     input.setAttribute("type", "text");
     input.setAttribute("value", text.textContent);
-    input.setAttribute("placeholder", "Name eingeben");
+    input.setAttribute("placeholder", "Bezeichnung eingeben");
 
     fo.appendChild(input);
     group.appendChild(fo);
@@ -148,6 +152,8 @@ function createDraggableNode(x, y, type) {
       else if (e.key === "Escape") group.removeChild(fo);
     });
   });
+
+
 
 }
 
