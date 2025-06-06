@@ -1,0 +1,21 @@
+.header {
+    display: flex;
+    align-items: center;
+    column-gap: 1rem;
+    height: 5vh;
+    overflow: hidden;
+    /*background: linear-gradient(to right, #9e78e9, #9eedf0);*/
+    background-color: white;
+}
+.logo {
+    height: 100%;
+    width: auto;
+}
+
+/*Überschrift erstmal unsichbar weil unsicher was styling angeht*/
+h1 {
+    margin: 10px;
+    font-size: 4vh;
+    color: white;
+    text-align: center;
+}
