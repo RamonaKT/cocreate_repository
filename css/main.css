@@ -26,3 +26,12 @@ h2 {
     border-top: 0;
     padding-top: 0;
 }
+
+button {
+    border-radius: 20px;
+}
+
+button.close {
+    margin-top: 10px;
+    background-color: #797ec6;
+}
