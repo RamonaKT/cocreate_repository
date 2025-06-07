@@ -58,6 +58,8 @@
 svg {
     border: 1px solid #ccc;
     background: white;
+    overflow: scroll;
+    object-view-box: 50 50;
 }
 
 .draggable circle {

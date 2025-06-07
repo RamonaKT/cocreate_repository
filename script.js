@@ -312,3 +312,30 @@ document.addEventListener('keydown', (e) => {
     }
   }
 });
+
+
+const initialViewBoxSize = 500;
+const centerX = 250;
+const centerY = 250;
+
+svg.setAttribute("viewBox", `${centerX - initialViewBoxSize / 2} ${centerY - initialViewBoxSize / 2} ${initialViewBoxSize} ${initialViewBoxSize}`);
+
+  let zoom = 1;
+  const zoomStep = 0.01;
+
+  svg.addEventListener("wheel", (e) => {
+    e.preventDefault();
+
+    zoom += e.deltaY > 0 ? zoomStep : -zoomStep;
+    zoom = Math.max(0.1, Math.min(zoom, 2)); // Begrenze Zoomfaktor
+
+    const viewBoxSize = 500 / zoom;
+    const centerX = 250; // Mittelpunkt x (für ViewBox 200)
+const centerY = 250; // Mittelpunkt y
+
+const x = centerX - viewBoxSize / 2;
+const y = centerY - viewBoxSize / 2;
+
+svg.setAttribute("viewBox", `${x} ${y} ${viewBoxSize} ${viewBoxSize}`);
+
+  });
