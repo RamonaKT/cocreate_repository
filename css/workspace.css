@@ -1,18 +1,20 @@
 /*Die Toolbar mit den Items zum ziehen*/
 #toolbar {
+    position: fixed;
     display: flex;
     justify-content: center;
     gap: 10%;
     padding: 10px;
-    background: white;
-    border-bottom: 2px solid #bbb;
-    height: 5vh;
-    border-top: 1px solid black;
-    border-bottom: 1px solid black;
+    background: transparent;
+    height: 6vh;
+    /*border-top: 1px solid black;
+    border-bottom: 1px solid black;*/
+    right: 200px;
+    top:70px;
 }
 
 .node-template {
-    width: 7vh;
+    width: 17vh;
     height: 5vh;
     border-radius: 15px;
     border: 2px solid black;
@@ -21,6 +23,7 @@
     cursor: grab;
     user-select: none;
     font-size: 1.5vh;
+    font-size: 20px;
 }
 
 .node-template[data-type="1"] {
@@ -41,8 +44,7 @@
     display: flex;
     justify-content: center;
     margin: 10px;
-    margin-top: 20px;
-    height: 80vh;
+    height: 85vh;
 }
 
 
@@ -98,19 +100,35 @@ foreignObject input {
 
 #sidebar-right, #sidebar-left {
     width: 25vh;
-    background: #f8f8f8;
-    border: 1px solid #ccc;
     padding: 10px;
     text-align: left;
     overflow-y: auto;
     font-size: 14px;
     font-family: sans-serif;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     /*margin-bottom: 2vh;*/
-    margin-top: 3vh;
+    
 }
 
 #sidebar-right {
     margin-left: 10px;
     height: 67.7vh;
+    background: #f8f8f8;
+    border: 1px solid #ccc;
+    margin-top: 3vh;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+#sidebar-left {
+    margin-right: 10px;
+    max-width: 75px;
+    background-color: transparent;
+    position: fixed;
+    left: 10px;
+    top: 70px;
+}
+
+.sidebar img {
+    height: 75px;
+    width: 75px;
+    border-radius: 15%;
 }
