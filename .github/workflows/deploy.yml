@@ -1,4 +1,4 @@
-name: Test and Tag
+name: Docker Build and Tag
 
 on:
   push:
@@ -6,28 +6,25 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Code auschecken
         uses: actions/checkout@v3
 
-      - name: Node.js installieren
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+      - name: Docker Image bauen
+        run: docker build -t cocreate-docker-app .
 
-      - name: Abhängigkeiten installieren
-        run: npm install
+      # Optional: Container testweise starten und prüfen, ob er läuft
+      - name: Testweise starten und prüfen
+        run: |
+          docker run -d -p 8080:8080 --name test-app cocreate-docker-app
+          sleep 5
+          curl -sSf http://localhost:8080 || (echo "Start fehlgeschlagen" && exit 1)
+          docker stop test-app
+          docker rm test-app
 
-      - name: Tests ausführen
-        run: npm test || echo "Keine Tests definiert"
-
-      - name: Build prüfen
-        run: npm run build || echo "Kein Build definiert"
-
-      # Optional: Tag setzen
       - name: Git Tag setzen
         run: |
           git config user.name github-actions
