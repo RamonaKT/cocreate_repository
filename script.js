@@ -1,3 +1,24 @@
+/*import { saveCreation, getCreations } from './supabase/database.js';
+import { subscribeToCreations } from './supabase/realtime.js';
+
+window.onload = async () => {
+  const creations = await getCreations();
+  console.log('All creations:', creations);
+
+  subscribeToCreations((payload) => {
+    console.log('New update in DB:', payload);
+  });
+
+  document.getElementById('save-btn').addEventListener('click', async () => {
+    const svg = document.querySelector('svg').outerHTML;
+    await saveCreation(svg, 'Meine Map', '127.0.0.1'); // später echte IP
+  });
+};
+*/
+
+
+
+
 const svg = document.getElementById('mindmap');
 let draggedType = null;
 let dragTarget = null;
