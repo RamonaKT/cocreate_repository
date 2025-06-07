@@ -40,6 +40,7 @@
 #mindmap-container {
     display: flex;
     justify-content: center;
+    margin: 10px;
     margin-top: 20px;
     height: 80vh;
 }
