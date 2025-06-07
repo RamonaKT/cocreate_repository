@@ -6,18 +6,16 @@ let offset = { x: 0, y: 0 };
 let allNodes = [];
 let allConnections = [];
 let selectedNode = null;
-
-let selectedConnection = null; // --- neu ---
+let selectedConnection = null; // neu
 
 const getCSSColor = (level) =>
-    getComputedStyle(document.documentElement).getPropertyValue(`--color-level-${level}`).trim();
+  getComputedStyle(document.documentElement).getPropertyValue(`--color-level-${level}`).trim();
 
 const nodeStyles = {
   1: { r: 60, color: getCSSColor(1), label: 'Ebene 1', fontSize: 16 },
-  2: { r: 50, color: getCSSColor(2), label: 'Ebene 2' , fontSize: 14 },
+  2: { r: 50, color: getCSSColor(2), label: 'Ebene 2', fontSize: 14 },
   3: { r: 40, color: getCSSColor(3), label: 'Ebene 3', fontSize: 12 },
 };
-
 
 // Drag aus Toolbar
 document.querySelectorAll('.node-template').forEach(el => {
@@ -34,7 +32,7 @@ svg.addEventListener('drop', e => {
   createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
 });
 
-// Browser-Koordinaten -> SVG
+// Browser-Koordinaten -> SVG-Koordinaten
 function getSVGPoint(x, y) {
   const pt = svg.createSVGPoint();
   pt.x = x;
@@ -68,12 +66,12 @@ function createDraggableNode(x, y, type) {
   text.setAttribute("font-size", style.fontSize);
   text.setAttribute("text-anchor", "middle");
   text.setAttribute("alignment-baseline", "middle");
-  text.textContent = "...";  // <-- leer statt "-"
+  text.textContent = "...";
   group.appendChild(text);
 
   allNodes.push({ id, group, x, y, r: style.r });
 
-  // Drag-Handler
+  // Drag-Start
   group.addEventListener('mousedown', e => {
     if (e.shiftKey) return;
     dragTarget = group;
@@ -85,6 +83,7 @@ function createDraggableNode(x, y, type) {
     circle.classList.add('dragging');
   });
 
+  // Drag-Ende auf SVG (mouseup)
   svg.addEventListener('mouseup', () => {
     if (dragTarget) {
       const circle = dragTarget.querySelector('circle');
@@ -93,11 +92,10 @@ function createDraggableNode(x, y, type) {
     dragTarget = null;
   });
 
-  // Verbindung-Handler
+  // Klick-Handler für Verbindungen
   group.addEventListener('click', e => {
     e.stopPropagation();
 
-    // Wenn eine Verbindung ausgewählt ist, diese deselecten
     if (selectedConnection) {
       selectedConnection.classList.remove('highlighted');
       selectedConnection = null;
@@ -116,12 +114,10 @@ function createDraggableNode(x, y, type) {
     }
   });
 
-
-  // ✍️ Doppelklick zum Umbenennen (SVG-intern, transparent)
+  // Doppelklick zum Umbenennen
   text.addEventListener('dblclick', e => {
     e.stopPropagation();
 
-    // Doppelt öffnen verhindern
     if (group.querySelector('foreignObject')) return;
 
     const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
@@ -139,8 +135,7 @@ function createDraggableNode(x, y, type) {
     group.appendChild(fo);
 
     input.focus();
-    input.setSelectionRange(input.value.length, input.value.length); // Cursor ans Ende
-
+    input.setSelectionRange(input.value.length, input.value.length);
 
     const save = () => {
       const value = input.value.trim();
@@ -157,9 +152,6 @@ function createDraggableNode(x, y, type) {
       else if (e.key === "Escape") group.removeChild(fo);
     });
   });
-
-
-
 }
 
 function highlightNode(id, on) {
@@ -169,8 +161,6 @@ function highlightNode(id, on) {
   if (on) circle.classList.add('highlighted');
   else circle.classList.remove('highlighted');
 }
-
-// Rest deines JS-Codes (dragging, connectNodes, updateConnections etc.)
 
 // Drag-Bewegung
 svg.addEventListener('mousemove', e => {
@@ -189,25 +179,18 @@ svg.addEventListener('mousemove', e => {
   updateConnections(id);
 });
 
-// Drag-Ende
-svg.addEventListener('mouseup', () => {
-  dragTarget = null;
-});
-
 // Deselect auf SVG-Klick
 svg.addEventListener('click', () => {
   if (selectedNode !== null) {
     highlightNode(selectedNode, false);
     selectedNode = null;
   }
-  // Deselektiere Verbindungslinie auch
   if (selectedConnection) {
     selectedConnection.classList.remove('highlighted');
     selectedConnection = null;
   }
 });
 
-// Verbindung aktualisieren bei Bewegung
 function updateConnections(movedId) {
   allConnections.forEach(conn => {
     if (conn.fromId === movedId || conn.toId === movedId) {
@@ -235,17 +218,13 @@ function connectNodes(fromId, toId) {
   line.setAttribute("stroke-width", "4");
   line.setAttribute("class", "connection-line");
 
-  // --- neu --- Klick zum Auswählen und Hervorheben der Linie
   line.addEventListener("click", e => {
     e.stopPropagation();
 
-    // Node Auswahl entfernen
     if (selectedNode !== null) {
       highlightNode(selectedNode, false);
       selectedNode = null;
     }
-
-    // Vorherige Verbindungsauswahl entfernen
     if (selectedConnection) {
       selectedConnection.classList.remove("highlighted");
     }
@@ -254,32 +233,26 @@ function connectNodes(fromId, toId) {
     selectedConnection.classList.add("highlighted");
   });
 
-  // Event zum Löschen der Linie per Rechtsklick
   line.addEventListener("contextmenu", e => {
     e.preventDefault();
-    // Linie entfernen
     svg.removeChild(line);
-    // Aus Verbindungsarray löschen
     allConnections = allConnections.filter(conn => conn.line !== line);
-
-    // Falls ausgewählt, Auswahl aufheben
     if (selectedConnection === line) selectedConnection = null;
   });
 
-  svg.insertBefore(line, svg.firstChild); // unter die Knoten legen
+  svg.insertBefore(line, svg.firstChild); // unter Knoten
   allConnections.push({ fromId, toId, line });
 }
 
-// Keydown-Listener für Löschen
+// Delete-Taste zum Entfernen von Knoten oder Verbindung
 document.addEventListener('keydown', (e) => {
-  // Wenn gerade ein Input-Element aktiv ist, nichts löschen
   const activeElement = document.activeElement;
   if (activeElement && (
-      activeElement.tagName === "INPUT" ||
-      activeElement.tagName === "TEXTAREA" ||
-      activeElement.isContentEditable
+    activeElement.tagName === "INPUT" ||
+    activeElement.tagName === "TEXTAREA" ||
+    activeElement.isContentEditable
   )) {
-    return; // Eingabe läuft, nicht löschen
+    return;
   }
 
   if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -297,7 +270,10 @@ document.addEventListener('keydown', (e) => {
       if (nodeIndex === -1) return;
 
       const node = allNodes[nodeIndex];
+      svg.removeChild(node.group);
+      allNodes.splice(nodeIndex, 1);
 
+      // Verbindungen mit dem Knoten entfernen
       allConnections = allConnections.filter(conn => {
         if (conn.fromId === selectedNode || conn.toId === selectedNode) {
           svg.removeChild(conn.line);
@@ -306,36 +282,84 @@ document.addEventListener('keydown', (e) => {
         return true;
       });
 
-      svg.removeChild(node.group);
-      allNodes.splice(nodeIndex, 1);
       selectedNode = null;
     }
   }
 });
 
+// --- ZOOM und PAN mit ViewBox ---
 
 const initialViewBoxSize = 500;
 const centerX = 250;
 const centerY = 250;
 
-svg.setAttribute("viewBox", `${centerX - initialViewBoxSize / 2} ${centerY - initialViewBoxSize / 2} ${initialViewBoxSize} ${initialViewBoxSize}`);
+let viewBox = {
+  x: centerX - initialViewBoxSize / 2,
+  y: centerY - initialViewBoxSize / 2,
+  w: initialViewBoxSize,
+  h: initialViewBoxSize,
+};
 
-  let zoom = 1;
-  const zoomStep = 0.01;
+svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
 
-  svg.addEventListener("wheel", (e) => {
-    e.preventDefault();
+let zoom = 1;
+const zoomStep = 0.025;
+const minZoom = 0.1;
+const maxZoom = 3;
 
-    zoom += e.deltaY > 0 ? zoomStep : -zoomStep;
-    zoom = Math.max(0.1, Math.min(zoom, 2)); // Begrenze Zoomfaktor
+// Zoom mit Mausrad
+svg.addEventListener("wheel", (e) => {
+  e.preventDefault();
 
-    const viewBoxSize = 500 / zoom;
-    const centerX = 250; // Mittelpunkt x (für ViewBox 200)
-const centerY = 250; // Mittelpunkt y
+  // Zoomrichtung
+  zoom += e.deltaY > 0 ? -zoomStep : zoomStep;
+  zoom = Math.min(Math.max(zoom, minZoom), maxZoom);
 
-const x = centerX - viewBoxSize / 2;
-const y = centerY - viewBoxSize / 2;
+  // Zoom um Mausposition (optional)
+  const mouseSVG = getSVGPoint(e.clientX, e.clientY);
 
-svg.setAttribute("viewBox", `${x} ${y} ${viewBoxSize} ${viewBoxSize}`);
+  // Neue ViewBox-Größe basierend auf Zoom
+  const newWidth = initialViewBoxSize / zoom;
+  const newHeight = initialViewBoxSize / zoom;
 
-  });
+  // ViewBox so verschieben, dass Zoom um Mausposition bleibt
+  viewBox.x = mouseSVG.x - (mouseSVG.x - viewBox.x) * (newWidth / viewBox.w);
+  viewBox.y = mouseSVG.y - (mouseSVG.y - viewBox.y) * (newHeight / viewBox.h);
+  viewBox.w = newWidth;
+  viewBox.h = newHeight;
+
+  updateViewBox();
+});
+
+function updateViewBox() {
+  svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+}
+
+// Pan mit WASD/Pfeiltasten (verschiebt ViewBox um festen Schritt)
+const panStep = 20;
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+  switch (e.key.toLowerCase()) {
+    case 'w':
+    case 'arrowup':
+      viewBox.y -= panStep * (viewBox.h / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 's':
+    case 'arrowdown':
+      viewBox.y += panStep * (viewBox.h / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 'a':
+    case 'arrowleft':
+      viewBox.x -= panStep * (viewBox.w / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 'd':
+    case 'arrowright':
+      viewBox.x += panStep * (viewBox.w / initialViewBoxSize);
+      updateViewBox();
+      break;
+  }
+});
