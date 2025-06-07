@@ -25,9 +25,49 @@
 <div id="mindmap-container">
 
   <div id="sidebar-left" class="sidebar">
-    <h3>Navigation</h3>
-    <p>Hier ist eine Liste mit all unseren Creations, wir können auch neue Erstellen. Und Dialog für Einstellungen</p>
-    <!-- Du kannst später dynamisch Inhalte hier einfügen -->
+
+    <!-- NUR ADMIN (user sperren, was sonst noch settings? link erstellen, ) -->
+      <img src="./img/iconSettings.png" alt="Icon settings"
+       style="cursor: pointer;" onclick="document.getElementById('dialogIconSettings').showModal()">
+
+    <dialog id="dialogIconSettings">
+      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
+      <button onclick="document.getElementById('dialogIconSettings').close()">Schließen</button>
+    </dialog>
+
+    <!-- NUR ADMIN -->
+      <img src="./img/iconAdd.png" alt="Icon add" 
+       style="cursor: pointer;" onclick="document.getElementById('dialogIconAdd').showModal()">
+
+    <dialog id="dialogIconAdd">
+      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
+      <button onclick="document.getElementById('dialogIconAdd').close()">Schließen</button>
+    </dialog>
+
+       <img src="./img/iconOverviewRooms.png" alt="Icon room overview"
+       style="cursor: pointer;" onclick="document.getElementById('dialogIconOverviewRooms').showModal()">
+
+    <dialog id="dialogIconOverviewRooms">
+      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
+      <button onclick="document.getElementById('dialogIconOverviewRooms').close()">Schließen</button>
+    </dialog>
+
+       <img src="./img/iconEdit.png" alt="Icon edit username"
+       style="cursor: pointer;" onclick="document.getElementById('dialogIconEdit').showModal()">
+
+    <dialog id="dialogIconEdit">
+      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
+      <button onclick="document.getElementById('dialogIconEdit').close()">Schließen</button>
+    </dialog>
+
+      <img src="./img/iconOverviewUser.png" alt="Icon edit username"
+       style="cursor: pointer;" onclick="document.getElementById('dialogIconOverviewUser').showModal()">
+
+    <dialog id="dialogIconOverviewUser">
+      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
+      <button onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
+    </dialog>
+
   </div>
 
   <svg id="mindmap" width="1000" height="600"></svg>
