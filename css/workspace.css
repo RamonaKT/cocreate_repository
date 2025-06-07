@@ -9,7 +9,7 @@
     height: 6vh;
     /*border-top: 1px solid black;
     border-bottom: 1px solid black;*/
-    right: 200px;
+    right: 20px;
     top:70px;
 }
 
@@ -122,7 +122,7 @@ foreignObject input {
     margin-right: 10px;
     max-width: 75px;
     background-color: transparent;
-    position: fixed;
+    position: absolute;
     left: 10px;
     top: 70px;
 }
