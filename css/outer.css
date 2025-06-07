@@ -16,6 +16,8 @@
 h1 {
     margin: 10px;
     font-size: 4vh;
-    color: white;
+    color: black;
     text-align: center;
+    font-weight: normal;
+    font-family: sans-serif;
 }
