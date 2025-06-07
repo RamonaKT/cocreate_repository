@@ -1,4 +1,4 @@
-name: Test and Tag
+name: Docker Build and Tag
 
 on:
   push:
@@ -6,31 +6,31 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # ⬅️ erlaubt Push von Tags
 
     steps:
-      - name: Checkout Code
+      - name: Code auschecken
         uses: actions/checkout@v3
 
-      - name: Node.js installieren
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+      - name: Docker Image bauen
+        run: docker build -t cocreate-docker-app .
 
-      - name: Abhängigkeiten installieren
-        run: npm install
+      - name: Testweise starten und prüfen
+        run: |
+          docker run -d -p 8080:8080 --name test-app cocreate-docker-app
+          sleep 5
+          curl -sSf http://localhost:8080 || (echo "Start fehlgeschlagen" && exit 1)
+          docker stop test-app
+          docker rm test-app
 
-      - name: Tests ausführen
-        run: npm test || echo "Keine Tests definiert"
-
-      - name: Build prüfen
-        run: npm run build || echo "Kein Build definiert"
-
-      # Optional: Tag setzen
       - name: Git Tag setzen
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git tag auto-deploy-$(date +'%Y%m%d%H%M%S')
-          git push --tags
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} --tags
