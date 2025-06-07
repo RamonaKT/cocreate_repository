@@ -14,10 +14,11 @@
 
 /*Überschrift erstmal unsichbar weil unsicher was styling angeht*/
 h1 {
-    margin: 10px;
+
     font-size: 4vh;
     color: black;
     text-align: center;
     font-weight: normal;
     font-family: sans-serif;
+    margin-left: 30vw;
 }
