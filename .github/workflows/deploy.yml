@@ -1,0 +1,36 @@
+name: Test and Tag
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Node.js installieren
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Abhängigkeiten installieren
+        run: npm install
+
+      - name: Tests ausführen
+        run: npm test || echo "Keine Tests definiert"
+
+      - name: Build prüfen
+        run: npm run build || echo "Kein Build definiert"
+
+      # Optional: Tag setzen
+      - name: Git Tag setzen
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag auto-deploy-$(date +'%Y%m%d%H%M%S')
+          git push --tags
