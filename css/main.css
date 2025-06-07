@@ -14,5 +14,15 @@ body {
 }
 
 dialog {
-    background-color: #9eedf0;
+    background-color: #caeff0;
+    position: fixed;
+    margin: 0;
+    top:100px;
+    left:40px;
+}
+
+h2 {
+    margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
 }
