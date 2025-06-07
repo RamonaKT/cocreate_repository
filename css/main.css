@@ -13,3 +13,25 @@ body {
     font-size: 16px;
 }
 
+dialog {
+    background-color: #caeff0;
+    position: fixed;
+    margin: 0;
+    top:100px;
+    left:40px;
+}
+
+h2 {
+    margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
+}
+
+button {
+    border-radius: 20px;
+}
+
+button.close {
+    margin-top: 10px;
+    background-color: #797ec6;
+}

@@ -27,56 +27,64 @@
   <div id="sidebar-left" class="sidebar">
 
     <!-- NUR ADMIN (user sperren, was sonst noch settings? link erstellen, ) -->
-      <img src="./img/iconSettings.png" alt="Icon settings"
+      <img src="./img/icon-gear.jpeg" alt="Icon settings"
        style="cursor: pointer;" onclick="document.getElementById('dialogIconSettings').showModal()">
 
     <dialog id="dialogIconSettings">
-      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
-      <button onclick="document.getElementById('dialogIconSettings').close()">Schließen</button>
+      <h2>Einstellungen</h2>
+      <p>Hier soll z.B. der Admin Nutzer (IP-Adressen) sperren können.</p>
+      <button class="close"  onclick="document.getElementById('dialogIconSettings').close()">Schließen</button>
     </dialog>
 
     <!-- NUR ADMIN -->
-      <img src="./img/iconAdd.png" alt="Icon add" 
+      <img src="./img/icon-plus.jpeg" alt="Icon add" 
        style="cursor: pointer;" onclick="document.getElementById('dialogIconAdd').showModal()">
 
     <dialog id="dialogIconAdd">
-      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
-      <button onclick="document.getElementById('dialogIconAdd').close()">Schließen</button>
+      <h2>Neuen Raum hinzufügen</h2>
+      <p>Hier soll der Admin neue Unterräume erzuegen können. 
+        Wenn möglich abfragen, ob der Inhalt kopiert werden soll.</p>
+      <button class="close"  onclick="document.getElementById('dialogIconAdd').close()">Schließen</button>
     </dialog>
 
-       <img src="./img/iconOverviewRooms.png" alt="Icon room overview"
+       <img src="./img/icon-pattern.jpeg" alt="Icon room overview"
        style="cursor: pointer;" onclick="document.getElementById('dialogIconOverviewRooms').showModal()">
 
     <dialog id="dialogIconOverviewRooms">
-      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
-      <button onclick="document.getElementById('dialogIconOverviewRooms').close()">Schließen</button>
+      <h2>Übersicht der Räume</h2>
+      <p>Hier soll ein Übersicht über offene Räume zu sehen sein. Das Icon soll nur sichtbar sein, wenn mehrere Räume existieren</p>
+      <button class="close"  onclick="document.getElementById('dialogIconOverviewRooms').close()">Schließen</button>
     </dialog>
 
-       <img src="./img/iconEdit.png" alt="Icon edit username"
+       <img src="./img/icon-pen.jpeg" alt="Icon edit username"
        style="cursor: pointer;" onclick="document.getElementById('dialogIconEdit').showModal()">
 
     <dialog id="dialogIconEdit">
-      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
-      <button onclick="document.getElementById('dialogIconEdit').close()">Schließen</button>
+      <h2>Setze deinen Anzeigenamen!</h2>
+      <p>Hier soll man seinen nickname ändern können. 
+        To-Do: array erstellen mit paar Standardwerten + generell speichern
+      </p>
+      <input type="text" id="setNickname" placeholder="choose wisely">
+      <button onclick="send('setNickname',{value:document.getElementById('setNickname').value})">Festlegen</button>
+      <br>
+      <button class="close" onclick="document.getElementById('dialogIconEdit').close()">Schließen</button>
     </dialog>
 
-      <img src="./img/iconOverviewUser.png" alt="Icon edit username"
+      <img src="./img/icon-eye.jpeg" alt="Icon edit username"
        style="cursor: pointer;" onclick="document.getElementById('dialogIconOverviewUser').showModal()">
 
     <dialog id="dialogIconOverviewUser">
-      <p>Dies ist ein Dialog, der beim Klicken auf das Bild erscheint.</p>
-      <button onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
+      <h2>Übersicht der Teilnehmer</h2>
+      <p>Hier soll eine Übersicht über die Nutzer erscheinen.</p>
+      <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
     </dialog>
 
   </div>
 
+  
   <svg id="mindmap" width="1000" height="600"></svg>
+  
 
-  <div id="sidebar-right" class="sidebar">
-    <h3>Cache</h3>
-    <p>Hier speichern wir Zwischenergebnisse</p>
-    <!-- Du kannst später dynamisch Inhalte hier einfügen -->
-  </div>
 
 </div>
 
