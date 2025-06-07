@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # ⬅️ erlaubt Push von Tags
 
     steps:
       - name: Code auschecken
@@ -16,7 +18,6 @@ jobs:
       - name: Docker Image bauen
         run: docker build -t cocreate-docker-app .
 
-      # Optional: Container testweise starten und prüfen, ob er läuft
       - name: Testweise starten und prüfen
         run: |
           docker run -d -p 8080:8080 --name test-app cocreate-docker-app
@@ -26,8 +27,10 @@ jobs:
           docker rm test-app
 
       - name: Git Tag setzen
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git tag auto-deploy-$(date +'%Y%m%d%H%M%S')
-          git push --tags
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} --tags
