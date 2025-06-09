@@ -8,6 +8,8 @@ let allConnections = [];
 let selectedNode = null;
 let selectedConnection = null; // neu
 
+svg.style.touchAction = 'none';
+
 const getCSSColor = (level) =>
   getComputedStyle(document.documentElement).getPropertyValue(`--color-level-${level}`).trim();
 
@@ -52,12 +54,38 @@ function createDraggableNode(x, y, type) {
   group.dataset.nodeId = id;
   svg.appendChild(group);
 
-  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  circle.setAttribute("cx", 0);
-  circle.setAttribute("cy", 0);
-  circle.setAttribute("r", style.r);
-  circle.setAttribute("fill", style.color);
-  group.appendChild(circle);
+  let shape;
+
+  if (type === "1") {
+    // Oval (Ellipse)
+    shape = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    shape.setAttribute("cx", 0);
+    shape.setAttribute("cy", 0);
+    shape.setAttribute("rx", style.r);
+    shape.setAttribute("ry", style.r * 0.6);
+  } else if (type === "2") {
+    // Rechteck mit abgerundeten Ecken
+    shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    shape.setAttribute("x", -style.r);
+    shape.setAttribute("y", -style.r * 0.6);
+    shape.setAttribute("width", style.r * 2);
+    shape.setAttribute("height", style.r * 1.2);
+    shape.setAttribute("rx", 15);
+    shape.setAttribute("ry", 15);
+  } else {
+    // Rechteck mit scharfen Ecken (Ebene 3)
+    shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    shape.setAttribute("x", -style.r);
+    shape.setAttribute("y", -style.r * 0.6);
+    shape.setAttribute("width", style.r * 2);
+    shape.setAttribute("height", style.r * 1.2);
+    shape.setAttribute("rx", 0);
+    shape.setAttribute("ry", 0);
+  }
+
+  shape.setAttribute("fill", style.color);
+  group.appendChild(shape);
+
 
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
   text.setAttribute("x", 0);
@@ -72,25 +100,62 @@ function createDraggableNode(x, y, type) {
   allNodes.push({ id, group, x, y, r: style.r });
 
   // Drag-Start
-  group.addEventListener('mousedown', e => {
-    if (e.shiftKey) return;
-    dragTarget = group;
-    const point = getSVGPoint(e.clientX, e.clientY);
-    const transform = group.getCTM();
-    offset.x = point.x - transform.e;
-    offset.y = point.y - transform.f;
+  group.addEventListener('pointerdown', e => {
 
-    circle.classList.add('dragging');
+    const isInputClick = e.target.tagName === 'INPUT' || e.target.closest('foreignObject');
+    if (isInputClick) return;
+
+    if (e.shiftKey) return;
+
+    const point = getSVGPoint(e.clientX, e.clientY);
+    const id = group.dataset.nodeId;
+    const node = allNodes.find(n => n.id === id);
+    if (!node) return;
+
+    dragTarget = group;
+    offset.x = point.x - node.x;
+    offset.y = point.y - node.y;
+
+    const shape = node.group.querySelector('ellipse, rect');
+    if (!shape) return;
+
+    shape.classList.add('dragging');
+
+    /*group.setPointerCapture(e.pointerId);*/
   });
 
   // Drag-Ende auf SVG (mouseup)
-  svg.addEventListener('mouseup', () => {
+  svg.addEventListener('pointerup', (e) => {
     if (dragTarget) {
-      const circle = dragTarget.querySelector('circle');
-      circle.classList.remove('dragging');
+      const id = dragTarget.dataset.nodeId;
+      const node = allNodes.find(n => n.id === id);
+      if (!node) return;
+
+      const shape = node.group.querySelector('ellipse, rect');
+      if (!shape) return;
+
+      shape.classList.remove('dragging');
+      /*  dragTarget.releasePointerCapture(e.pointerId);*/
     }
     dragTarget = null;
   });
+
+
+  svg.addEventListener('pointercancel', e => {
+    if (dragTarget) {
+      const id = dragTarget.dataset.nodeId;
+      const node = allNodes.find(n => n.id === id);
+      if (!node) return;
+
+      const shape = node.group.querySelector('ellipse, rect');
+      if (!shape) return;
+
+      shape.classList.remove('dragging');
+      /*  dragTarget.releasePointerCapture(e.pointerId);*/
+    }
+    dragTarget = null;
+  });
+
 
   // Klick-Handler für Verbindungen
   group.addEventListener('click', e => {
@@ -132,6 +197,7 @@ function createDraggableNode(x, y, type) {
     input.setAttribute("placeholder", "Bezeichnung eingeben");
 
     fo.appendChild(input);
+    fo.style.pointerEvents = 'all';
     group.appendChild(fo);
 
     input.focus();
@@ -152,18 +218,23 @@ function createDraggableNode(x, y, type) {
       else if (e.key === "Escape") group.removeChild(fo);
     });
   });
+
 }
+
 
 function highlightNode(id, on) {
   const node = allNodes.find(n => n.id === id);
   if (!node) return;
-  const circle = node.group.querySelector('circle');
-  if (on) circle.classList.add('highlighted');
-  else circle.classList.remove('highlighted');
+
+  const shape = node.group.querySelector('ellipse, rect');
+  if (!shape) return;
+
+  if (on) shape.classList.add('highlighted');
+  else shape.classList.remove('highlighted');
 }
 
 // Drag-Bewegung
-svg.addEventListener('mousemove', e => {
+svg.addEventListener('pointermove', e => {
   if (!dragTarget) return;
   const point = getSVGPoint(e.clientX, e.clientY);
   const id = dragTarget.dataset.nodeId;
