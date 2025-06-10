@@ -24,6 +24,7 @@
     user-select: none;
     font-size: 1.5vh;
     font-size: 20px;
+    text-align: center;
 }
 
 .node-template[data-type="1"] {
