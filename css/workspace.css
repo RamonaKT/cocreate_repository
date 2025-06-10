@@ -9,8 +9,8 @@
     height: 6vh;
     /*border-top: 1px solid black;
     border-bottom: 1px solid black;*/
-    right: 20px;
-    top:70px;
+    right: 1vw;
+    top:10vh;
 }
 
 .node-template {
@@ -24,6 +24,7 @@
     user-select: none;
     font-size: 1.5vh;
     font-size: 20px;
+    text-align: center;
 }
 
 .node-template[data-type="1"] {
@@ -125,8 +126,8 @@ foreignObject input {
     max-width: 75px;
     background-color: transparent;
     position: absolute;
-    left: 10px;
-    top: 70px;
+    left: 1vw;
+    top: 10vh;
 }
 
 .sidebar img {
