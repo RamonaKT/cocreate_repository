@@ -63,23 +63,30 @@ svg {
     object-view-box: 50 50;
 }
 
-.draggable circle {
+
+.draggable ellipse,
+.draggable rect {
     cursor: grab;
     transition: stroke 0.2s ease;
     overflow: hidden;
 }
 
-.draggable circle.dragging {
+
+.draggable ellipse.dragging,
+.draggable rect.dragging {
     cursor: grabbing;
 }
 
-.draggable circle.highlighted {
+
+.draggable ellipse.highlighted,
+.draggable rect.highlighted {
     stroke: yellow;
-    stroke-width: 6;
+    stroke-width: 3;
 }
+
 .connection-line.highlighted {
-    stroke: yellow !important;
-    stroke-width: 6 !important; /* größer für Hervorhebung */
+    stroke: yellow ;
+    stroke-width: 3; /* größer für Hervorhebung */
     filter: drop-shadow(0 0 5px yellow);
 }
 

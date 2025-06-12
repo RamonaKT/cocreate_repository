@@ -17,8 +17,8 @@ dialog {
     background-color: #caeff0;
     position: fixed;
     margin: 0;
-    top:100px;
-    left:40px;
+    top:10vh;
+    left:1vw;
 }
 
 h2 {
