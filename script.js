@@ -1,3 +1,8 @@
+console.log('SVG-Element:', document.getElementById('mindmap'));
+console.log('ColorPicker:', document.getElementById('colorPicker'));
+
+
+
 const svg = document.getElementById('mindmap');
 let draggedType = null;
 let dragTarget = null;
@@ -434,3 +439,58 @@ document.addEventListener("keydown", (e) => {
       break;
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const colorPicker = document.getElementById('colorPicker');
+let selectedElement = null;
+
+// Klick auf SVG – Element auswählen
+svg.addEventListener('click', (event) => {
+  console.log('Klick auf:', event.target);
+
+  // Finde nächstes rect/ellipse
+  const shape = event.target.closest('rect, ellipse');
+
+  if (shape && svg.contains(shape)) {
+    selectedElement = shape;
+    console.log('Element ausgewählt:', shape);
+
+    // Picker auf aktuelle Füllfarbe setzen
+    const curr = getComputedStyle(shape).fill;
+    colorPicker.value = curr.startsWith('rgb')
+      ? rgbToHex(curr)
+      : (curr || '#ffffff');
+  } else {
+    selectedElement = null;
+    console.log('Kein Shape gefunden!');
+  }
+});
+
+// Picker ändert fill via style.fill
+colorPicker.addEventListener('input', () => {
+  if (!selectedElement) {
+    console.log('Kein Element ausgewählt!');
+    return;
+  }
+
+  selectedElement.style.fill = colorPicker.value;
+  console.log('Farbe gesetzt:', colorPicker.value);
+});
+
+// Hilfs-Funktion: "rgb(12,34,56)" → "#0c2238"
+function rgbToHex(rgb) {
+  const [r, g, b] = rgb.match(/\d+/g).map(Number);
+  return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
+}
