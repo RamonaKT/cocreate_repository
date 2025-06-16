@@ -25,6 +25,7 @@ class MindmapEditor extends HTMLElement {
   }
 
   async connectedCallback() {
+      console.log('Mindmap Editor verbunden');
     const cssURL = new URL('mindmap-editor.css', import.meta.url);
     const cssText = await fetch(cssURL).then(res => res.text());
 
