@@ -434,3 +434,26 @@ document.addEventListener("keydown", (e) => {
       break;
   }
 });
+
+
+
+async function exportMindmapToPDF() {
+  const { jsPDF } = window.jspdf;
+
+  const svgElement = document.getElementById('mindmap');
+  
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'pt',
+    format: [svgElement.clientWidth, svgElement.clientHeight],
+  });
+
+  // svg2pdf erwartet ein Promise (oder callback)
+  await window.svg2pdf(svgElement, pdf, {
+    xOffset: 0,
+    yOffset: 0,
+    scale: 1
+  });
+
+  pdf.save("mindmap.pdf");
+}
