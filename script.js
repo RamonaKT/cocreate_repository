@@ -1,3 +1,4 @@
+
 const svg = document.getElementById('mindmap');
 let draggedType = null;
 let dragTarget = null;
@@ -457,3 +458,80 @@ async function exportMindmapToPDF() {
 
   pdf.save("mindmap.pdf");
 }
+
+
+
+
+
+
+
+/*import dotenv from 'dotenv';
+
+const supabaseUrl = process.env.supabaseUrl;
+const supabaseKey = process.env.supabaseKey;*/
+
+const supabaseUrl = 'https://hnwelnphgipfckclbfzy.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhud2VsbnBoZ2lwZmNrY2xiZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTgwNDYsImV4cCI6MjA2NDg5NDA0Nn0.J7s9FgaGCuA110Ql2za713HWp_xP2jM21t96sWD-xSI';
+
+
+
+
+// Überprüfe, ob die Umgebungsvariablen korrekt geladen wurden
+if (!supabaseUrl || !supabaseKey) {
+    console.log('Supabase URL:', supabaseUrl);  // Gibt die URL aus
+    console.log('Supabase Key:', supabaseKey);  // Gibt den Key aus
+    console.error('Supabase URL oder Schlüssel fehlen!');
+    process.exit(1);
+}
+
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+
+
+
+
+let userNickname = null;
+
+window.submitNickname = async function() {
+  const input = document.getElementById('nicknameInput').value.trim();
+  if (!input) {
+    alert("Bitte gib einen Nickname ein.");
+    return;
+  }
+
+  let ip = 'unbekannt';
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+    console.log("IP-Adresse:", ip);
+  } catch (err) {
+    console.warn("IP konnte nicht ermittelt werden:", err);
+  }
+
+  // In Supabase speichern
+  const { error } = await supabase
+    .from('users')
+    .insert([{ nickname: input, ipadress: ip }]); // Achte auf den Spaltennamen!
+
+  if (error) {
+    alert("Fehler beim Speichern: " + error.message);
+    return;
+  }
+
+  userNickname = input;
+  localStorage.setItem("mindmap_nickname", userNickname);
+  document.getElementById('nicknameModal').style.display = 'none';
+  console.log("Nickname gespeichert:", userNickname);
+};
+
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem("mindmap_nickname");
+  if (saved) {
+    userNickname = saved;
+    document.getElementById('nicknameModal').style.display = 'none';
+    console.log("Nickname geladen:", userNickname);
+  } else {
+    document.getElementById('nicknameModal').style.display = 'flex';
+  }
+});
