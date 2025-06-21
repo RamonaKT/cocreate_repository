@@ -465,13 +465,11 @@ async function exportMindmapToPDF() {
 
 
 
-/*import dotenv from 'dotenv';
 
-const supabaseUrl = process.env.supabaseUrl;
-const supabaseKey = process.env.supabaseKey;*/
 
-const supabaseUrl = 'https://hnwelnphgipfckclbfzy.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhud2VsbnBoZ2lwZmNrY2xiZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTgwNDYsImV4cCI6MjA2NDg5NDA0Nn0.J7s9FgaGCuA110Ql2za713HWp_xP2jM21t96sWD-xSI';
+const supabaseUrl = process.env.SUPABASEURL;
+const supabaseKey = process.env.SUPABASEKEY;
+
 
 
 
