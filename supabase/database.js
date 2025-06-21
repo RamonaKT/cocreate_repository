@@ -4,10 +4,11 @@ export async function saveCreation(svg, title, ip) {
     const { data, error } = await supabase
         .from('creations')
         .insert([{
-            "svg-code": svg,   
+            svg_code: svg,   
             title: title,
             admin_ip: ip
-        }]);
+        }])
+        .select();
 
     if (error) throw error;
     return data;

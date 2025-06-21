@@ -1,4 +1,90 @@
-import { getCreations } from './supabase/database.js';  // Pfad anpassen
+import { supabase } from './supabase/client.js';
+
+const params = new URLSearchParams(window.location.search);
+const mindmapId = params.get('id');
+
+// Falls eine ID vorhanden ist, lade die Mindmap
+if (mindmapId) {
+  loadMindmapFromDB(mindmapId);
+}
+
+async function loadMindmapFromDB(id) {
+  const { data, error } = await supabase
+    .from('creations')
+    .select('svg_code, title, admin_ip')
+    .eq('creationid', id)
+    .single();
+
+  if (error || !data) {
+    alert("Mindmap nicht gefunden.");
+    return;
+  }
+
+  const parser = new DOMParser();
+  const svgDoc = parser.parseFromString(data.svg_code, "image/svg+xml");
+  const loadedSVG = svgDoc.documentElement;
+
+  const svg = document.getElementById('mindmap');
+  svg.innerHTML = loadedSVG.innerHTML; // Inhalte übernehmen
+
+  svg.setAttribute("viewBox", loadedSVG.getAttribute("viewBox") || "0 0 1000 600");
+
+  // Initialisiere geladene Knoten
+  svg.querySelectorAll('g.draggable').forEach(group => {
+    const id = group.dataset.nodeId || 'node' + allNodes.length;
+
+    const transform = group.getAttribute("transform");
+    const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    const x = parseFloat(match?.[1] || 0);
+    const y = parseFloat(match?.[2] || 0);
+
+    const shape = group.querySelector('ellipse, rect');
+    const r = shape?.getAttribute('rx') || shape?.getAttribute('r') || 40;
+
+    allNodes.push({ id, group, x, y, r: parseFloat(r) });
+
+    // EventListener hinzufügen wie in createDraggableNode()
+    addEventListenersToNode(group, id, parseFloat(r));
+  });
+
+
+
+
+  // ggf. noch Attribute vom geladenen SVG übernehmen (Breite, Höhe etc.)
+  svg.querySelectorAll('line.connection-line').forEach(line => {
+    const fromId = line.dataset.from;
+    const toId = line.dataset.to;
+    if (fromId && toId) {
+      // Event-Handling hinzufügen
+      line.addEventListener("click", e => {
+        e.stopPropagation();
+
+        if (selectedNode !== null) {
+          highlightNode(selectedNode, false);
+          selectedNode = null;
+        }
+        if (selectedConnection) {
+          selectedConnection.classList.remove("highlighted");
+        }
+
+        selectedConnection = line;
+        selectedConnection.classList.add("highlighted");
+      });
+
+      line.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        svg.removeChild(line);
+        allConnections = allConnections.filter(conn => conn.line !== line);
+        if (selectedConnection === line) selectedConnection = null;
+      });
+
+      allConnections.push({ fromId, toId, line });
+    }
+  });
+
+}
+
+import { getCreations, saveCreation } from './supabase/database.js';  // Pfad anpassen
 
 window.onload = async () => {
   try {
@@ -16,25 +102,35 @@ function getSVGSource() {
   return serializer.serializeToString(svg);
 }
 
-import { saveCreation } from './supabase/database.js';
 
 async function saveCurrentMindmap() {
   const title = prompt("Titel eingeben:");
+  if (!title) return;
+
   const svgData = getSVGSource();
-  const ip = await fetch('/api/ip').then(res => res.text()); // Oder anders
+  const ip = await fetch('https://api.ipify.org').then(res => res.text());
 
   try {
-    await saveCreation(svgData, title, ip);
-    alert("Gespeichert!");
+    const result = await saveCreation(svgData, title, ip);
+
+    // Nehme die ID der gespeicherten Zeile aus Supabase
+    const id = result[0]?.creationid;
+    if (id) {
+      const link = `${location.origin}/index.html?id=${id}`;
+      alert(`Gespeichert!\nÖffentlicher Link: ${link}`);
+      console.log(link);
+    } else {
+      alert("Gespeichert, aber keine ID zurückbekommen.");
+    }
   } catch (error) {
     console.error("Fehler beim Speichern:", error);
+    alert("Fehler beim Speichern!");
   }
 }
 
 document.getElementById('saveButton').addEventListener('click', saveCurrentMindmap);
-//
 
-const svg = document.getElementById('mindmap');
+
 let draggedType = null;
 let dragTarget = null;
 let offset = { x: 0, y: 0 };
@@ -135,29 +231,29 @@ function createDraggableNode(x, y, type) {
 
   allNodes.push({ id, group, x, y, r: style.r });
 
-  // Drag-Start
-  group.addEventListener('pointerdown', e => {
+  addEventListenersToNode(group, id, style.r);
 
+}
+
+
+function addEventListenersToNode(group, id, r) {
+  const node = allNodes.find(n => n.id === id);
+  if (!node) return;
+
+  const shape = group.querySelector('ellipse, rect');
+  const text = group.querySelector('text');
+
+  // Drag Start
+  group.addEventListener('pointerdown', e => {
     const isInputClick = e.target.tagName === 'INPUT' || e.target.closest('foreignObject');
     if (isInputClick) return;
-
     if (e.shiftKey) return;
 
     const point = getSVGPoint(e.clientX, e.clientY);
-    const id = group.dataset.nodeId;
-    const node = allNodes.find(n => n.id === id);
-    if (!node) return;
-
     dragTarget = group;
     offset.x = point.x - node.x;
     offset.y = point.y - node.y;
-
-    const shape = node.group.querySelector('ellipse, rect');
-    if (!shape) return;
-
     shape.classList.add('dragging');
-
-    /*group.setPointerCapture(e.pointerId);*/
   });
 
   // Drag-Ende auf SVG (mouseup)
@@ -171,7 +267,7 @@ function createDraggableNode(x, y, type) {
       if (!shape) return;
 
       shape.classList.remove('dragging');
-      /*  dragTarget.releasePointerCapture(e.pointerId);*/
+
     }
     dragTarget = null;
   });
@@ -187,21 +283,18 @@ function createDraggableNode(x, y, type) {
       if (!shape) return;
 
       shape.classList.remove('dragging');
-      /*  dragTarget.releasePointerCapture(e.pointerId);*/
+
     }
     dragTarget = null;
   });
 
-
-  // Klick-Handler für Verbindungen
+  // Click-Verbindung
   group.addEventListener('click', e => {
     e.stopPropagation();
-
     if (selectedConnection) {
       selectedConnection.classList.remove('highlighted');
       selectedConnection = null;
     }
-
     if (selectedNode === null) {
       selectedNode = id;
       highlightNode(id, true);
@@ -216,47 +309,38 @@ function createDraggableNode(x, y, type) {
   });
 
   // Doppelklick zum Umbenennen
-  text.addEventListener('dblclick', e => {
+  text?.addEventListener('dblclick', e => {
     e.stopPropagation();
-
     if (group.querySelector('foreignObject')) return;
 
     const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
-    fo.setAttribute("x", -style.r);
+    fo.setAttribute("x", -r);
     fo.setAttribute("y", -10);
-    fo.setAttribute("width", style.r * 2);
+    fo.setAttribute("width", r * 2);
     fo.setAttribute("height", 20);
 
     const input = document.createElement("input");
     input.setAttribute("type", "text");
     input.setAttribute("value", text.textContent);
-    input.setAttribute("placeholder", "Bezeichnung eingeben");
-
     fo.appendChild(input);
     fo.style.pointerEvents = 'all';
     group.appendChild(fo);
 
     input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
 
     const save = () => {
       const value = input.value.trim();
-      if (value) {
-        text.textContent = value;
-      }
+      if (value) text.textContent = value;
       group.removeChild(fo);
     };
 
     input.addEventListener("blur", save);
-
     input.addEventListener("keydown", e => {
       if (e.key === "Enter") save();
       else if (e.key === "Escape") group.removeChild(fo);
     });
   });
-
 }
-
 
 function highlightNode(id, on) {
   const node = allNodes.find(n => n.id === id);
@@ -321,9 +405,14 @@ function connectNodes(fromId, toId) {
   line.setAttribute("y1", from.y);
   line.setAttribute("x2", to.x);
   line.setAttribute("y2", to.y);
+  line.dataset.from = fromId;
+  line.dataset.to = toId;
+
   line.setAttribute("stroke", "#888");
   line.setAttribute("stroke-width", "3");
   line.setAttribute("class", "connection-line");
+
+  svg.appendChild(line);
 
   line.addEventListener("click", e => {
     e.stopPropagation();
@@ -477,7 +566,7 @@ async function exportMindmapToPDF() {
   const { jsPDF } = window.jspdf;
 
   const svgElement = document.getElementById('mindmap');
-  
+
   const pdf = new jsPDF({
     orientation: 'landscape',
     unit: 'pt',
