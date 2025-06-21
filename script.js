@@ -9,6 +9,31 @@ window.onload = async () => {
   }
 };
 
+
+// saving mindmaps
+function getSVGSource() {
+  const serializer = new XMLSerializer();
+  return serializer.serializeToString(svg);
+}
+
+import { saveCreation } from './supabase/database.js';
+
+async function saveCurrentMindmap() {
+  const title = prompt("Titel eingeben:");
+  const svgData = getSVGSource();
+  const ip = await fetch('/api/ip').then(res => res.text()); // Oder anders
+
+  try {
+    await saveCreation(svgData, title, ip);
+    alert("Gespeichert!");
+  } catch (error) {
+    console.error("Fehler beim Speichern:", error);
+  }
+}
+
+document.getElementById('saveButton').addEventListener('click', saveCurrentMindmap);
+//
+
 const svg = document.getElementById('mindmap');
 let draggedType = null;
 let dragTarget = null;

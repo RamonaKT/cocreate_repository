@@ -3,7 +3,11 @@ import { supabase } from './client.js';
 export async function saveCreation(svg, title, ip) {
     const { data, error } = await supabase
         .from('creations')
-        .insert([{ svg, title, admin_ip: ip }]);
+        .insert([{
+            "svg-code": svg,   
+            title: title,
+            admin_ip: ip
+        }]);
 
     if (error) throw error;
     return data;
