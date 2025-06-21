@@ -1,3 +1,14 @@
+import { getCreations } from './supabase/database.js';  // Pfad anpassen
+
+window.onload = async () => {
+  try {
+    const creations = await getCreations();
+    console.log('Verbindung zu Supabase erfolgreich. Gefundene Daten:', creations);
+  } catch (error) {
+    console.error('Fehler bei der Verbindung zu Supabase:', error);
+  }
+};
+
 const svg = document.getElementById('mindmap');
 let draggedType = null;
 let dragTarget = null;

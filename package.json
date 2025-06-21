@@ -1,0 +1,27 @@
+{
+  "name": "cocreate_repository",
+  "version": "1.0.0",
+  "description": "- Docker kann über den Befehl: docker run -p 8080:8080 cocreate-docker-app gestartet werden.",
+  "main": "script.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RamonaKT/cocreate_repository.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RamonaKT/cocreate_repository/issues"
+  },
+  "homepage": "https://github.com/RamonaKT/cocreate_repository#readme",
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
