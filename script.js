@@ -466,10 +466,12 @@ async function exportMindmapToPDF() {
 
 
 
-
+/*
 const supabaseUrl = process.env.SUPABASEURL;
 const supabaseKey = process.env.SUPABASEKEY;
-
+*/
+const supabaseUrl = 'https://hnwelnphgipfckclbfzy.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhud2VsbnBoZ2lwZmNrY2xiZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTgwNDYsImV4cCI6MjA2NDg5NDA0Nn0.J7s9FgaGCuA110Ql2za713HWp_xP2jM21t96sWD-xSI';
 
 
 
@@ -483,7 +485,6 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
 
 
 
@@ -507,10 +508,32 @@ window.submitNickname = async function() {
     console.warn("IP konnte nicht ermittelt werden:", err);
   }
 
-  // In Supabase speichern
+  // Prüfen, ob es bereits Nutzer gibt (also ob dies der erste ist)
+  let isAdmin = false;
+  try {
+    const { data: existingUsers, error: fetchError } = await supabase
+      .from('users')
+      .select('id') // oder '*'
+      .limit(1);
+
+    if (fetchError) {
+      alert("Fehler beim Prüfen vorhandener Benutzer: " + fetchError.message);
+      return;
+    }
+
+    isAdmin = existingUsers.length === 0; // true, wenn es noch keine Nutzer gibt
+  } catch (err) {
+    console.warn("Fehler beim Admin-Check:", err);
+  }
+
+  // Benutzer in Supabase speichern
   const { error } = await supabase
     .from('users')
-    .insert([{ nickname: input, ipadress: ip }]); // Achte auf den Spaltennamen!
+    .insert([{
+      nickname: input,
+      ipadress: ip,
+      admin: isAdmin 
+    }]);
 
   if (error) {
     alert("Fehler beim Speichern: " + error.message);
@@ -519,12 +542,14 @@ window.submitNickname = async function() {
 
   userNickname = input;
   localStorage.setItem("mindmap_nickname", userNickname);
+  //sessionStorage.setItem("mindmap_nickname", userNickname);
   document.getElementById('nicknameModal').style.display = 'none';
   console.log("Nickname gespeichert:", userNickname);
 };
 
 window.addEventListener('load', () => {
   const saved = localStorage.getItem("mindmap_nickname");
+  //const saved = sessionStorage.getItem("mindmap_nickname");
   if (saved) {
     userNickname = saved;
     document.getElementById('nicknameModal').style.display = 'none';
@@ -533,3 +558,80 @@ window.addEventListener('load', () => {
     document.getElementById('nicknameModal').style.display = 'flex';
   }
 });
+
+
+
+
+async function loadAndDisplayAllUsers() {
+  const { data, error } = await supabase
+    .from('users')
+    .select('nickname, locked')
+    .order('nickname', { ascending: true });
+
+  if (error) {
+    console.error("Fehler beim Laden der Benutzer:", error.message);
+    return;
+  }
+
+  const container = document.getElementById('userListContainer');
+  if (!container) {
+    console.warn("Container für Nutzerliste nicht gefunden!");
+    return;
+  }
+
+  container.innerHTML = ''; // Liste zurücksetzen
+
+  if (data.length === 0) {
+    container.innerHTML = '<p>Keine Nutzer vorhanden.</p>';
+    return;
+  }
+
+  /*data.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'user-entry'; // Optional für CSS
+    div.textContent = user.nickname;
+    container.appendChild(div);
+  });*/
+
+  data.forEach(user => {
+  const div = document.createElement('div');
+  div.className = 'user-entry';
+  div.textContent = user.nickname;
+
+  // Rechtsklick-Handler
+  div.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const confirmed = confirm(`Möchtest du die IP von "${user.nickname}" sperren?`);
+    if (confirmed) {
+      lockUserByNickname(user.nickname);
+    }
+  });
+
+  container.appendChild(div);
+});
+
+if (user.locked) {
+  div.style.opacity = 0.5;
+  div.title = "Gesperrt";
+}
+
+
+}
+
+
+
+async function lockUserByNickname(nickname) {
+  const { error } = await supabase
+    .from('users')
+    .update({ locked: true })
+    .eq('nickname', nickname);
+
+  if (error) {
+    alert("Fehler beim Sperren: " + error.message);
+    return;
+  }
+
+  alert(`Benutzer "${nickname}" wurde gesperrt.`);
+  loadAndDisplayAllUsers(); // Liste aktualisieren
+}
+

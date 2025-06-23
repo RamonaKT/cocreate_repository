@@ -72,15 +72,21 @@
     </dialog>
 
       <img src="./img/icon-eye.jpeg" alt="Icon edit username"
-       style="cursor: pointer;" onclick="document.getElementById('dialogIconOverviewUser').showModal()">
+       style="cursor: pointer;" onclick="document.getElementById('dialogIconOverviewUser').showModal(); loadAndDisplayAllUsers();">
+
+    
+
 
     <dialog id="dialogIconOverviewUser">
       <h2>Übersicht der Teilnehmer</h2>
-      <p>Hier soll eine Übersicht über die Nutzer erscheinen.</p>
-      <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
+      <!-- <p>Hier soll eine Übersicht über die Nutzer erscheinen.</p> -->
+       <div id="userListContainer"></div> <!-- ⬅ Hier werden die Nicknames eingefügt -->
+      <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button> 
+
     </dialog>
 
-    
+
+
 
   </div>
   <button class="pdfButton" onclick="exportMindmapToPDF()">Download PDF</button>
