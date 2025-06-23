@@ -1,0 +1,15 @@
+{
+  "name": "cocreate_repository",
+  "version": "1.0.0",
+  "description": "- Docker kann über den Befehl: docker run -p 8080:8080 cocreate-docker-app gestartet werden.",
+  "main": "mindmap-editor.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
