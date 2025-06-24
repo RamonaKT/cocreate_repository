@@ -717,7 +717,7 @@ async function lockUserByNickname(nickname) {
   loadAndDisplayAllUsers(); // Liste aktualisieren
 }
 
-
+/*
 function startIpLockWatcher(ip) {
   setInterval(async () => {
     try {
@@ -734,6 +734,33 @@ function startIpLockWatcher(ip) {
 
       if (user && user.locked === true) {
         console.warn("Zugang durch Sperre blockiert");
+        showNicknameModal();
+      }
+
+    } catch (err) {
+      console.error("Fehler beim automatischen Sperr-Check:", err);
+    }
+  }, 5000); // alle 5 Sekunden
+}
+*/
+
+function startIpLockWatcher(ip) {
+  setInterval(async () => {
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('locked')
+        .eq('ipadress', ip)
+        .eq('nickname', userNickname)  // ← zusätzlicher Filter
+        .maybeSingle();
+
+      if (error) {
+        console.error("Fehler beim Sperrcheck:", error.message);
+        return;
+      }
+
+      if (user && user.locked === true) {
+        console.warn("Zugang durch Sperre blockiert (Nickname oder IP)");
         showNicknameModal();
       }
 
