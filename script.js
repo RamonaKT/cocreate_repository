@@ -704,7 +704,7 @@ function showNicknameModal() {
 
 
 
-
+/*
 async function loadAndDisplayAllUsers() {
   const { data, error } = await supabase
     .from('users')
@@ -734,7 +734,7 @@ async function loadAndDisplayAllUsers() {
     div.className = 'user-entry'; // Optional für CSS
     div.textContent = user.nickname;
     container.appendChild(div);
-  });*/
+  });*//*
 
   data.forEach(user => {
   const div = document.createElement('div');
@@ -759,7 +759,72 @@ if (user.locked) {
 }
 
 
+}*/ //nicht nur Admin kann sperren, bzw noch sich selbst
+
+async function loadAndDisplayAllUsers() {
+  const container = document.getElementById('userListContainer');
+  if (!container) {
+    console.warn("Container für Nutzerliste nicht gefunden!");
+    return;
+  }
+
+  container.innerHTML = '';
+
+  const { data: allUsers, error } = await supabase
+    .from('users')
+    .select('nickname, locked, admin, ipadress');
+
+  if (error) {
+    console.error("Fehler beim Laden der Benutzer:", error.message);
+    return;
+  }
+
+  if (!userNickname) {
+    console.warn("Aktueller Benutzername nicht geladen.");
+    return;
+  }
+
+  const { data: currentUserData, error: selfError } = await supabase
+    .from('users')
+    .select('nickname, admin')
+    .eq('nickname', userNickname)
+    .maybeSingle();
+
+  if (selfError || !currentUserData) {
+    console.warn("Fehler beim Laden des aktuellen Users oder kein Treffer.");
+    return;
+  }
+
+  const isAdmin = currentUserData.admin;
+
+  allUsers.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'user-entry';
+    if (user.locked) div.classList.add('locked');
+
+    // Text anzeigen
+    div.innerHTML = `
+      <span>${user.nickname}</span>
+      ${user.admin ? '<span class="badge admin">Admin</span>' : ''}
+    `;
+
+    // Rechtsklick-Handler (nur Admins, nicht auf sich selbst)
+    if (isAdmin && user.nickname !== userNickname) {
+      div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const confirmed = confirm(`Möchtest du die IP von "${user.nickname}" sperren?`);
+        if (confirmed) {
+          lockUserByNickname(user.nickname);
+        }
+      });
+    }
+
+    container.appendChild(div);
+  });
 }
+
+
+
 
 
 

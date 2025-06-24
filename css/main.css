@@ -52,3 +52,39 @@ button.close {
 .pdfButton:hover {
   background-color: #218838; /* Dunkleres Grün beim Hover */
 }
+
+
+.user-entry {
+  background: #ced2ff;
+  padding: 10px;
+  margin: 8px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-entry:hover {
+  background: #a4a9ea;
+}
+
+.user-entry.locked {
+  opacity: 0.4;
+}
+
+.user-entry .badge {
+  font-size: 0.75em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: #444;
+  color: #ced2ff;
+}
+
+.user-entry .badge.admin {
+  background: #797ec6;
+}
