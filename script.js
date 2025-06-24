@@ -491,65 +491,6 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 let userNickname = null;
 
-/*
-window.submitNickname = async function() {
-  const input = document.getElementById('nicknameInput').value.trim();
-  if (!input) {
-    alert("Bitte gib einen Nickname ein.");
-    return;
-  }
-
-  let ip = 'unbekannt';
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const data = await res.json();
-    ip = data.ip;
-    console.log("IP-Adresse:", ip);
-  } catch (err) {
-    console.warn("IP konnte nicht ermittelt werden:", err);
-  }
-
-  
-
-  // Prüfen, ob es bereits Nutzer gibt (also ob dies der erste ist)
-  let isAdmin = false;
-  try {
-    const { data: existingUsers, error: fetchError } = await supabase
-      .from('users')
-      .select('id') // oder '*'
-      .limit(1);
-
-    if (fetchError) {
-      alert("Fehler beim Prüfen vorhandener Benutzer: " + fetchError.message);
-      return;
-    }
-
-    isAdmin = existingUsers.length === 0; // true, wenn es noch keine Nutzer gibt
-  } catch (err) {
-    console.warn("Fehler beim Admin-Check:", err);
-  }
-
-  // Benutzer in Supabase speichern
-  const { error } = await supabase
-    .from('users')
-    .insert([{
-      nickname: input,
-      ipadress: ip,
-      admin: isAdmin 
-    }]);
-
-  if (error) {
-    alert("Fehler beim Speichern: " + error.message);
-    return;
-  }
-
-  userNickname = input;
-  //localStorage.setItem("mindmap_nickname", userNickname);
-  sessionStorage.setItem("mindmap_nickname", userNickname);
-  document.getElementById('nicknameModal').style.display = 'none';
-  console.log("Nickname gespeichert:", userNickname);
-};*/
-
 window.submitNickname = async function () {
   const input = document.getElementById('nicknameInput').value.trim();
   if (!input) {
@@ -638,19 +579,7 @@ window.submitNickname = async function () {
 
 
 
-/*
-window.addEventListener('load', () => {
-  //const saved = localStorage.getItem("mindmap_nickname");
-  const saved = sessionStorage.getItem("mindmap_nickname");
-  if (saved) {
-    userNickname = saved;
-    document.getElementById('nicknameModal').style.display = 'none';
-    console.log("Nickname geladen:", userNickname);
-  } else {
-    document.getElementById('nicknameModal').style.display = 'flex';
-  }
-});
-*/
+
 window.addEventListener('load', async () => {
   let ip = 'unbekannt';
 
@@ -702,65 +631,6 @@ function showNicknameModal() {
 }
 
 
-
-
-/*
-async function loadAndDisplayAllUsers() {
-  const { data, error } = await supabase
-    .from('users')
-    .select('nickname, locked')
-    .order('nickname', { ascending: true });
-
-  if (error) {
-    console.error("Fehler beim Laden der Benutzer:", error.message);
-    return;
-  }
-
-  const container = document.getElementById('userListContainer');
-  if (!container) {
-    console.warn("Container für Nutzerliste nicht gefunden!");
-    return;
-  }
-
-  container.innerHTML = ''; // Liste zurücksetzen
-
-  if (data.length === 0) {
-    container.innerHTML = '<p>Keine Nutzer vorhanden.</p>';
-    return;
-  }
-
-  /*data.forEach(user => {
-    const div = document.createElement('div');
-    div.className = 'user-entry'; // Optional für CSS
-    div.textContent = user.nickname;
-    container.appendChild(div);
-  });*//*
-
-  data.forEach(user => {
-  const div = document.createElement('div');
-  div.className = 'user-entry';
-  div.textContent = user.nickname;
-
-  // Rechtsklick-Handler
-  div.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    const confirmed = confirm(`Möchtest du die IP von "${user.nickname}" sperren?`);
-    if (confirmed) {
-      lockUserByNickname(user.nickname);
-    }
-  });
-
-  container.appendChild(div);
-});
-
-if (user.locked) {
-  div.style.opacity = 0.5;
-  div.title = "Gesperrt";
-}
-
-
-}*/ //nicht nur Admin kann sperren, bzw noch sich selbst
-
 async function loadAndDisplayAllUsers() {
   const container = document.getElementById('userListContainer');
   if (!container) {
@@ -798,34 +668,38 @@ async function loadAndDisplayAllUsers() {
   const isAdmin = currentUserData.admin;
 
   allUsers.forEach(user => {
-    const div = document.createElement('div');
-    div.className = 'user-entry';
-    if (user.locked) div.classList.add('locked');
+  const div = document.createElement('div');
+  div.className = 'user-entry';
+  if (user.locked) div.classList.add('locked');
 
-    // Text anzeigen
-    div.innerHTML = `
-      <span>${user.nickname}</span>
-      ${user.admin ? '<span class="badge admin">Admin</span>' : ''}
-    `;
+  // Hauptname
+  const nameSpan = document.createElement('span');
+  nameSpan.textContent = user.nickname;
+  div.appendChild(nameSpan);
 
-    // Rechtsklick-Handler (nur Admins, nicht auf sich selbst)
-    if (isAdmin && user.nickname !== userNickname) {
-      div.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        const confirmed = confirm(`Möchtest du die IP von "${user.nickname}" sperren?`);
-        if (confirmed) {
-          lockUserByNickname(user.nickname);
-        }
-      });
-    }
+  // Admin-Badge NUR wenn wirklich true
+  if (user.admin === true || user.admin === 'true' || user.admin === 1) {
+    const badge = document.createElement('span');
+    badge.className = 'badge admin';
+    badge.textContent = 'Admin';
+    div.appendChild(badge);
+  }
 
-    container.appendChild(div);
-  });
+  // Rechtsklick-Sperren (Admin → andere User)
+  if (isAdmin && user.nickname !== userNickname) {
+    div.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const confirmed = confirm(`Möchtest du die IP von "${user.nickname}" sperren?`);
+      if (confirmed) {
+        lockUserByNickname(user.nickname);
+      }
+    });
+  }
+
+  container.appendChild(div);
+});
+
 }
-
-
-
-
 
 
 async function lockUserByNickname(nickname) {
