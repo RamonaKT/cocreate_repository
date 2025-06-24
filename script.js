@@ -491,6 +491,7 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 let userNickname = null;
 
+/*
 window.submitNickname = async function() {
   const input = document.getElementById('nicknameInput').value.trim();
   if (!input) {
@@ -507,6 +508,8 @@ window.submitNickname = async function() {
   } catch (err) {
     console.warn("IP konnte nicht ermittelt werden:", err);
   }
+
+  
 
   // Prüfen, ob es bereits Nutzer gibt (also ob dies der erste ist)
   let isAdmin = false;
@@ -541,15 +544,104 @@ window.submitNickname = async function() {
   }
 
   userNickname = input;
-  localStorage.setItem("mindmap_nickname", userNickname);
-  //sessionStorage.setItem("mindmap_nickname", userNickname);
+  //localStorage.setItem("mindmap_nickname", userNickname);
+  sessionStorage.setItem("mindmap_nickname", userNickname);
+  document.getElementById('nicknameModal').style.display = 'none';
+  console.log("Nickname gespeichert:", userNickname);
+};*/
+
+window.submitNickname = async function () {
+  const input = document.getElementById('nicknameInput').value.trim();
+  if (!input) {
+    alert("Bitte gib einen Nickname ein.");
+    return;
+  }
+
+  let ip = 'unbekannt';
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+    console.log("IP-Adresse:", ip);
+  } catch (err) {
+    console.warn("IP konnte nicht ermittelt werden:", err);
+  }
+
+  // --- CHECK: Ist IP aktuell blockiert (locked_until in Zukunft)?
+  try {
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('locked_until')
+      .eq('ipadress', ip)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchError) {
+      alert("Fehler beim IP-Check: " + fetchError.message);
+      return;
+    }
+
+    if (existingUser?.locked_until) {
+      const now = new Date();
+      const until = new Date(existingUser.locked_until);
+      if (until > now) {
+        alert(`Diese IP ist noch bis ${until.toLocaleTimeString()} gesperrt für neue Nicknamen.`);
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("Fehler beim locked_until-Check:", err);
+    return;
+  }
+
+  // --- Admin-Check: erster User?
+  let isAdmin = false;
+  try {
+    const { data: existingUsers, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1);
+
+    if (checkError) {
+      alert("Fehler beim Admin-Check: " + checkError.message);
+      return;
+    }
+
+    isAdmin = existingUsers.length === 0;
+  } catch (err) {
+    console.warn("Fehler beim Admin-Check:", err);
+  }
+
+  // --- Neuen Nickname speichern mit 10-Minuten-Sperre
+  const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  const { error: insertError } = await supabase
+    .from('users')
+    .insert([{
+      nickname: input,
+      ipadress: ip,
+      admin: isAdmin,
+      locked_until: lockUntil
+    }]);
+
+  if (insertError) {
+    alert("Fehler beim Speichern: " + insertError.message);
+    return;
+  }
+
+  userNickname = input;
+  sessionStorage.setItem("mindmap_nickname", userNickname);
   document.getElementById('nicknameModal').style.display = 'none';
   console.log("Nickname gespeichert:", userNickname);
 };
 
+
+
+/*
 window.addEventListener('load', () => {
-  const saved = localStorage.getItem("mindmap_nickname");
-  //const saved = sessionStorage.getItem("mindmap_nickname");
+  //const saved = localStorage.getItem("mindmap_nickname");
+  const saved = sessionStorage.getItem("mindmap_nickname");
   if (saved) {
     userNickname = saved;
     document.getElementById('nicknameModal').style.display = 'none';
@@ -558,6 +650,57 @@ window.addEventListener('load', () => {
     document.getElementById('nicknameModal').style.display = 'flex';
   }
 });
+*/
+window.addEventListener('load', async () => {
+  let ip = 'unbekannt';
+
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+    console.log("IP-Adresse erkannt:", ip);
+  } catch (err) {
+    console.error("IP konnte nicht ermittelt werden:", err);
+    showNicknameModal();
+    return;
+  }
+
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('nickname, locked')
+      .eq('ipadress', ip)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Fehler bei der Benutzerprüfung:", error.message);
+      showNicknameModal();
+      return;
+    }
+
+    if (!user || user.locked === true) {
+      console.warn("Zugang gesperrt oder noch kein User für IP");
+      showNicknameModal();
+    } else {
+      userNickname = user.nickname;
+      sessionStorage.setItem("mindmap_nickname", userNickname);
+      document.getElementById('nicknameModal').style.display = 'none';
+      console.log("Benutzer automatisch erkannt:", userNickname);
+    }
+
+    startIpLockWatcher(ip);
+
+  } catch (err) {
+    console.error("Fehler bei der IP-Login-Logik:", err);
+    showNicknameModal();
+  }
+});
+
+function showNicknameModal() {
+  sessionStorage.removeItem("mindmap_nickname");
+  document.getElementById('nicknameModal').style.display = 'flex';
+}
+
 
 
 
@@ -633,5 +776,31 @@ async function lockUserByNickname(nickname) {
 
   alert(`Benutzer "${nickname}" wurde gesperrt.`);
   loadAndDisplayAllUsers(); // Liste aktualisieren
+}
+
+
+function startIpLockWatcher(ip) {
+  setInterval(async () => {
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('locked')
+        .eq('ipadress', ip)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Fehler beim Sperrcheck:", error.message);
+        return;
+      }
+
+      if (user && user.locked === true) {
+        console.warn("Zugang durch Sperre blockiert");
+        showNicknameModal();
+      }
+
+    } catch (err) {
+      console.error("Fehler beim automatischen Sperr-Check:", err);
+    }
+  }, 5000); // alle 5 Sekunden
 }
 
