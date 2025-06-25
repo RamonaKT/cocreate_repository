@@ -1,7 +1,116 @@
+
+import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
+
+
 import { supabase } from './supabase/client.js';
 
 const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
+
+const svg = document.getElementById('mindmap');
+
+const socket = io("http://localhost:3000"); // Verbindung zum Server 
+const userId = `${Date.now()}-${Math.random()}`;
+
+/*socket.emit("join-map", { mapId: mindmapId, userId });*/
+
+socket.on("initial-sync", ({ nodes, users }) => {
+  nodes.forEach(data => {
+    const node = allNodes.find(n => n.id === data.id);
+    if (node) {
+      node.x = data.x;
+      node.y = data.y;
+      node.group.setAttribute("transform", `translate(${data.x},${data.y})`);
+    }
+  });
+});
+
+
+socket.on("node-moving", data => {
+  console.log("📡 node-moving empfangen", data);
+  const node = allNodes.find(n => n.id === data.id);
+  if (node) {
+    node.x = data.x;
+    node.y = data.y;
+    node.group.setAttribute("transform", `translate(${data.x}, ${data.y})`);
+    updateConnections(data.id);
+  }
+});
+
+
+
+socket.on("node-moved", data => {
+  const node = allNodes.find(n => n.id === data.id);
+  if (node) {
+    node.x = data.x;
+    node.y = data.y;
+    node.group.setAttribute("transform", `translate(${data.x},${data.y})`);
+    updateConnections(data.id);
+  }
+});
+
+
+socket.on("node-added", data => {
+  if (!allNodes.find(n => n.id === data.id)) {
+    createDraggableNode(data.x, data.y, data.type, data.id, true);
+  }
+});
+
+socket.on("node-deleted", ({ id }) => {
+  const nodeIndex = allNodes.findIndex(n => n.id === id);
+  if (nodeIndex === -1) return;
+
+  const node = allNodes[nodeIndex];
+  if (svg.contains(node.group)) {
+    svg.removeChild(node.group);
+  }
+  allNodes.splice(nodeIndex, 1);
+
+  // Verbindungen entfernen
+  allConnections = allConnections.filter(conn => {
+    if (conn.fromId === id || conn.toId === id) {
+      if (svg.contains(conn.line)) {
+        svg.removeChild(conn.line);
+      }
+
+      return false;
+    }
+    return true;
+  });
+});
+
+socket.on("connection-added", ({ fromId, toId }) => {
+  // Duplikate verhindern
+  if (allConnections.some(conn => conn.fromId === fromId && conn.toId === toId)) return;
+  connectNodes(fromId, toId);
+});
+
+socket.on("connection-deleted", ({ fromId, toId }) => {
+  const connIndex = allConnections.findIndex(conn => conn.fromId === fromId && conn.toId === toId);
+  if (connIndex !== -1) {
+    const conn = allConnections[connIndex];
+    svg.removeChild(conn.line);
+    allConnections.splice(connIndex, 1);
+  }
+});
+
+socket.on("node-renamed", ({ id, text }) => {
+  const node = allNodes.find(n => n.id === id);
+  if (node) {
+    const textEl = node.group.querySelector("text");
+    if (textEl) {
+      textEl.textContent = text;
+    }
+  }
+});
+
+
+socket.on("kicked", () => {
+  alert("Du wurdest vom Admin entfernt.");
+  window.location.href = "/";
+});
+
+
 
 // Falls eine ID vorhanden ist, lade die Mindmap
 if (mindmapId) {
@@ -24,7 +133,7 @@ async function loadMindmapFromDB(id) {
   const svgDoc = parser.parseFromString(data.svg_code, "image/svg+xml");
   const loadedSVG = svgDoc.documentElement;
 
-  const svg = document.getElementById('mindmap');
+
   svg.innerHTML = loadedSVG.innerHTML; // Inhalte übernehmen
 
   svg.setAttribute("viewBox", loadedSVG.getAttribute("viewBox") || "0 0 1000 600");
@@ -50,7 +159,7 @@ async function loadMindmapFromDB(id) {
 
 
 
-  // ggf. noch Attribute vom geladenen SVG übernehmen (Breite, Höhe etc.)
+  
   svg.querySelectorAll('line.connection-line').forEach(line => {
     const fromId = line.dataset.from;
     const toId = line.dataset.to;
@@ -73,12 +182,21 @@ async function loadMindmapFromDB(id) {
 
       line.addEventListener("contextmenu", e => {
         e.preventDefault();
-        svg.removeChild(line);
+        if (svg.contains(line)) {
+          svg.removeChild(line);
+        }
+
+        socket.emit("connection-deleted", {
+          fromId: line.dataset.from,
+          toId: line.dataset.to
+        });
         allConnections = allConnections.filter(conn => conn.line !== line);
         if (selectedConnection === line) selectedConnection = null;
       });
 
       allConnections.push({ fromId, toId, line });
+      socket.emit("connection-added", { fromId, toId });
+
     }
   });
 
@@ -174,11 +292,12 @@ function getSVGPoint(x, y) {
   return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 
-function createDraggableNode(x, y, type) {
+function createDraggableNode(x, y, type, idOverride, fromNetwork = false) {
   const style = nodeStyles[type];
   if (!style) return;
 
-  const id = 'node' + allNodes.length;
+  //const id = 'node' + allNodes.length;
+  const id = idOverride || 'node' + allNodes.length;
 
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
   group.setAttribute("class", "draggable");
@@ -233,8 +352,11 @@ function createDraggableNode(x, y, type) {
 
   addEventListenersToNode(group, id, style.r);
 
-}
+  if (!fromNetwork) {
+    socket.emit("node-added", { id, x, y, type });
+  }
 
+}
 
 function addEventListenersToNode(group, id, r) {
   const node = allNodes.find(n => n.id === id);
@@ -267,6 +389,7 @@ function addEventListenersToNode(group, id, r) {
       if (!shape) return;
 
       shape.classList.remove('dragging');
+      socket.emit("node-moved", { id: node.id, x: node.x, y: node.y });
 
     }
     dragTarget = null;
@@ -331,13 +454,21 @@ function addEventListenersToNode(group, id, r) {
     const save = () => {
       const value = input.value.trim();
       if (value) text.textContent = value;
-      group.removeChild(fo);
+
+      if (group.contains(fo)) {
+        group.removeChild(fo);
+      }
+      socket.emit("node-renamed", { id, text: value });
     };
 
     input.addEventListener("blur", save);
     input.addEventListener("keydown", e => {
-      if (e.key === "Enter") save();
-      else if (e.key === "Escape") group.removeChild(fo);
+      if (e.key === "Enter") {
+        e.preventDefault();  
+        input.blur();        
+      } else if (e.key === "Escape") {
+        group.removeChild(fo);
+      }
     });
   });
 }
@@ -367,8 +498,18 @@ svg.addEventListener('pointermove', e => {
   node.x = newX;
   node.y = newY;
 
+  socket.emit("node-moving", {
+
+    id: node.id,
+    x: node.x,
+    y: node.y,
+
+  });
+  console.log(" node-moving gesendet", node.id, node.x, node.y);
   updateConnections(id);
 });
+
+
 
 // Deselect auf SVG-Klick
 svg.addEventListener('click', () => {
@@ -434,10 +575,16 @@ function connectNodes(fromId, toId) {
     svg.removeChild(line);
     allConnections = allConnections.filter(conn => conn.line !== line);
     if (selectedConnection === line) selectedConnection = null;
+    socket.emit("connection-deleted", {
+      fromId: line.dataset.from,
+      toId: line.dataset.to
+    });
   });
 
-  svg.insertBefore(line, svg.firstChild); // unter Knoten
+  svg.insertBefore(line, svg.firstChild); 
   allConnections.push({ fromId, toId, line });
+  socket.emit("connection-added", { fromId, toId });
+
 }
 
 // Delete-Taste zum Entfernen von Knoten oder Verbindung
@@ -455,9 +602,18 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
 
     if (selectedConnection) {
+      const fromId = selectedConnection.dataset.from;
+      const toId = selectedConnection.dataset.to;
+
       svg.removeChild(selectedConnection);
       allConnections = allConnections.filter(conn => conn.line !== selectedConnection);
       selectedConnection = null;
+
+      socket.emit("connection-deleted", {
+        fromId,
+        toId
+      });
+
       return;
     }
 
@@ -468,6 +624,8 @@ document.addEventListener('keydown', (e) => {
       const node = allNodes[nodeIndex];
       svg.removeChild(node.group);
       allNodes.splice(nodeIndex, 1);
+
+      socket.emit("node-deleted", { id: selectedNode });
 
       // Verbindungen mit dem Knoten entfernen
       allConnections = allConnections.filter(conn => {
@@ -582,3 +740,17 @@ async function exportMindmapToPDF() {
 
   pdf.save("mindmap.pdf");
 }
+
+/*
+socket.on("user-joined", ({ userId, isAdmin }) => {
+  // aktualisiere UI
+});
+socket.on("user-kicked", ({ userId }) => {
+  // entferne aus UI
+});
+socket.on("user-left", ({ userId }) => {
+  // entferne aus UI
+});
+*/
+
+
