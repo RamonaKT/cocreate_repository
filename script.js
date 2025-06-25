@@ -490,6 +490,7 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 
 let userNickname = null;
+let userToLock = null;
 
 window.submitNickname = async function () {
   const input = document.getElementById('nicknameInput').value.trim();
@@ -554,7 +555,7 @@ window.submitNickname = async function () {
     console.warn("Error with admin check:", err);
   }
 
-  // safe new nickname with 10 min lock
+  // save new nickname with 10 min lock
   const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
   const { error: insertError } = await supabase
@@ -687,15 +688,19 @@ async function loadAndDisplayAllUsers() {
   }
 
   // rightclick-lock 
-  if (isAdmin && user.nickname !== userNickname) {
-    div.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      const confirmed = confirm(`Do you want to lock the IP from "${user.nickname}" ?`);
-      if (confirmed) {
-        lockUserByNickname(user.nickname);
-      }
-    });
-  }
+if (isAdmin && user.nickname !== userNickname) {
+  div.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    userToLock = user.nickname;
+    document.getElementById('dialogIconOverviewUser').close(); 
+
+
+    document.getElementById('ipLockOverlay').style.display = 'flex';
+    document.getElementById('overlayMessage').textContent =
+      `Do you want to lock IP from "${user.nickname}" ?`;
+  });
+}
+
 
   container.appendChild(div);
 });
@@ -714,7 +719,7 @@ async function lockUserByNickname(nickname) {
     return;
   }
 
-  alert(`User "${nickname}" was locked.`);
+  //alert(`User "${nickname}" was locked.`);
   loadAndDisplayAllUsers(); //update list
 }
 
@@ -777,3 +782,28 @@ function startIpLockWatcher(ip) {
 }
 
 
+document.getElementById('confirmLockBtn').addEventListener('click', async () => {
+  if (userToLock) {
+    await lockUserByNickname(userToLock);
+
+    // show confirmation in overlay
+    const messageBox = document.getElementById('overlayMessage');
+    messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
+
+    // don´t show buttons
+    document.querySelector('.overlay-buttons').style.display = 'none';
+
+    // close overlay after two seconds
+    setTimeout(() => {
+      document.getElementById('ipLockOverlay').style.display = 'none';
+      document.querySelector('.overlay-buttons').style.display = 'flex';
+      userToLock = null;
+    }, 2000);
+  }
+});
+
+
+document.getElementById('cancelLockBtn').addEventListener('click', () => {
+  userToLock = null;
+  document.getElementById('ipLockOverlay').style.display = 'none';
+});

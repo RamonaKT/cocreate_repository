@@ -67,6 +67,7 @@ button.close {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  z-index: 1;
 }
 
 .user-entry:hover {
@@ -87,4 +88,48 @@ button.close {
 
 .user-entry .badge.admin {
   background: #797ec6;
+}
+
+
+
+
+#ipLockOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4); /* Optional: dunkler Hintergrund */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+  /* Kein pointer-events hier! */
+}
+
+#ipLockOverlay .overlay-box {
+  pointer-events: auto;
+  background: white;
+  padding: 2em;
+  border-radius: 10px;
+  text-align: center;
+  max-width: 300px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+
+
+
+
+.overlay-box {
+  background: white;
+  padding: 2em;
+  border-radius: 10px;
+  text-align: center;
+  max-width: 300px;
+}
+
+.overlay-buttons {
+  margin-top: 1em;
+  display: flex;
+  justify-content: space-around;
 }

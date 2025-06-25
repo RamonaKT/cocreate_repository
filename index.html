@@ -91,6 +91,17 @@
   </div>
   <button class="pdfButton" onclick="exportMindmapToPDF()">Download PDF</button>
   
+  <div id="ipLockOverlay" style="display: none;">
+  <div class="overlay-box">
+    <p id="overlayMessage">Möchtest du diese IP wirklich sperren?</p>
+    <div class="overlay-buttons">
+      <button id="confirmLockBtn">Ja, sperren</button>
+      <button id="cancelLockBtn">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+
   <svg id="mindmap" width="1000" height="600"></svg>
   
 </div>
