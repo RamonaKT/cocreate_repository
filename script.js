@@ -12,7 +12,7 @@ const svg = document.getElementById('mindmap');
 const socket = io("http://localhost:3000"); // Verbindung zum Server 
 const userId = `${Date.now()}-${Math.random()}`;
 
-/*socket.emit("join-map", { mapId: mindmapId, userId });*/
+socket.emit("join-map", { mapId: mindmapId, userId });
 
 socket.on("initial-sync", ({ nodes, users }) => {
   nodes.forEach(data => {
@@ -741,7 +741,7 @@ async function exportMindmapToPDF() {
   pdf.save("mindmap.pdf");
 }
 
-/*
+
 socket.on("user-joined", ({ userId, isAdmin }) => {
   // aktualisiere UI
 });
@@ -751,6 +751,6 @@ socket.on("user-kicked", ({ userId }) => {
 socket.on("user-left", ({ userId }) => {
   // entferne aus UI
 });
-*/
+
 
 
