@@ -623,50 +623,11 @@ function connectNodes(fromId, toId, fromNetwork = false) {
     selectedConnection.classList.add("highlighted");
   });
 
-  /*line.addEventListener("contextmenu", e => {
-    e.preventDefault();
-
-    svg.removeChild(line);
-    allConnections = allConnections.filter(conn => conn.line !== line);
-    if (selectedConnection === line) selectedConnection = null;
-
-
-    const index = yConnections.toArray().findIndex(conn => conn.fromId === fromId && conn.toId === toId);
-    if (index !== -1) {
-      yConnections.delete(index, 1); // Dadurch wird es an andere gesendet
-    }
-  });*/
   line.addEventListener("contextmenu", e => {
     e.preventDefault();
 
     const fromId = line.dataset.from;
     const toId = line.dataset.to;
-    /*
-        const index = yConnections.toArray().findIndex(conn => conn.fromId === fromId && conn.toId === toId);
-        if (index !== -1) {
-          // ✅ Direkt aus toArray holen (unverändert!)
-          const deletedConnection = yConnections.toArray()[index];
-          console.log('🗑️ Lösche Verbindung:', { fromId, toId });
-          console.log(' Vorherige array:', yConnections.toArray());
-          yConnections.delete(index, 1);
-          console.log(' Nachher:', yConnections.toArray());
-    
-    
-          // Jetzt kannst du sicher mit deletedConnection arbeiten
-          const conn = allConnections.find(c => c.fromId === deletedConnection.fromId && c.toId === deletedConnection.toId);
-          if (conn) {
-            svg.removeChild(conn.line);
-            allConnections = allConnections.filter(c => c !== conn);
-          }
-        }*/
-
-    /* for (let i = 0; i < yConnections.length; i++) {
-       const conn = yConnections.get(i);
-       if (conn.fromId === fromId && conn.toId === toId) {
-         yConnections.delete(i, 1);
-         break;
-       }
-     }*/
 
     deleteConnection(fromId, toId);
 
@@ -699,51 +660,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
 
-    /* if (selectedConnection) {
-       const fromId = selectedConnection.dataset.from;
-       const toId = selectedConnection.dataset.to;
- 
-       svg.removeChild(selectedConnection);
-       allConnections = allConnections.filter(conn => conn.line !== selectedConnection);
-       selectedConnection = null;
- 
- 
-       const index = yConnections.toArray().findIndex(conn => conn.fromId === fromId && conn.toId === toId);
-       if (index !== -1) {
-         yConnections.delete(index, 1); // Broadcast Löschung
-       }
- 
-       return;*/
-
     if (selectedConnection) {
       const fromId = selectedConnection.dataset.from;
       const toId = selectedConnection.dataset.to;
-
-      /* const index = yConnections.toArray().findIndex(conn => conn.fromId === fromId && conn.toId === toId);
-       if (index !== -1) {
-         // ✅ Direkt aus toArray holen (unverändert!)
-         const deletedConnection = yConnections.toArray()[index];
-         console.log('🗑️ Lösche Verbindung:', { fromId, toId });
-         console.log(' Vorherige array:', yConnections.toArray());
-         yConnections.delete(index, 1);
-         console.log(' Nachher:', yConnections.toArray());
- 
- 
-         // Jetzt kannst du sicher mit deletedConnection arbeiten
-         const conn = allConnections.find(c => c.fromId === deletedConnection.fromId && c.toId === deletedConnection.toId);
-         if (conn) {
-           svg.removeChild(conn.line);
-           allConnections = allConnections.filter(c => c !== conn);
-         }
-       }*/
-
-      /* for (let i = 0; i < yConnections.length; i++) {
-         const conn = yConnections.get(i);
-         if (conn.fromId === fromId && conn.toId === toId) {
-           yConnections.delete(i, 1);
-           break;
-         }
-       }*/
 
       deleteConnection(fromId, toId);
 
