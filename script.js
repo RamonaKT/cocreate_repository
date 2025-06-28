@@ -271,7 +271,8 @@ window.onload = async () => {
     console.error('Fehler bei der Verbindung zu Supabase:', error);
   }
 
-  const nickname = sessionStorage.getItem("mindmap_nickname");
+  //const nickname = sessionStorage.getItem("mindmap_nickname");
+  const nickname = localStorage.getItem("mindmap_nickname");
   const params = new URLSearchParams(window.location.search);
   const mindmapId = params.get('id');
 
@@ -853,7 +854,7 @@ function createNicknameModal() {
 
 
 
-
+/*
 window.submitNickname = async function () {
   const input = document.getElementById('nicknameInput').value.trim();
   if (!input) {
@@ -932,7 +933,132 @@ window.submitNickname = async function () {
     console.error("Fehler bei Nickname-Speicherung:", err);
     alert("Fehler beim Speichern.");
   }
+};*/
+
+
+window.submitNickname = async function () {
+  const input = document.getElementById('nicknameInput').value.trim();
+  if (!input) {
+    alert("Bitte Nickname eingeben.");
+    return;
+  }
+
+  const mindmapId = new URLSearchParams(window.location.search).get('id');
+  if (!mindmapId) {
+    alert("Keine gültige Mindmap-ID in der URL.");
+    return;
+  }
+
+  let ip = 'unknown';
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+  } catch (err) {
+    console.warn("IP konnte nicht ermittelt werden:", err);
+  }
+
+  try {
+    // 🕵️ Nutzer mit Nickname suchen
+    const { data: existingUser, error } = await supabase
+      .from('users')
+      .select('nickname, locked, mindmap_id')
+      .eq('nickname', input)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Fehler beim Nutzer-Check:", error.message);
+      alert("Technischer Fehler beim Login.");
+      return;
+    }
+
+    if (existingUser) {
+      if (existingUser.locked) {
+        alert("Dieser Nutzer ist gesperrt.");
+        return;
+      }
+
+      const allowedMaps = existingUser.mindmap_id || [];
+      if (!allowedMaps.includes(mindmapId)) {
+        alert("Dieser Nickname hat keinen Zugriff auf diese Mindmap.");
+        return;
+      }
+
+      // ✅ Berechtigung vorhanden
+      userNickname = existingUser.nickname;
+      //sessionStorage.setItem("mindmap_nickname", userNickname);
+      localStorage.setItem("mindmap_nickname", userNickname);
+      document.getElementById('nicknameModal')?.remove();
+      startIpLockWatcher(ip);
+      console.log("Bestehender Nutzer angemeldet:", userNickname);
+      return;
+    }
+
+    // ➕ Neuen Nutzer erstellen mit mindmapId
+    const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+/*
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert([{
+        nickname: input,
+        ipadress: ip,
+        locked: false,
+        admin: false,
+        locked_until: lockUntil,
+        mindmap_id: [mindmapId]  // direkt Zugriff auf aktuelle Map geben
+      }]);*/
+
+        // Hol dir admin_ip für diese Mindmap
+    const { data: creationData, error: creationError } = await supabase
+      .from('creations')
+      .select('admin_ip')
+      .eq('creationid', mindmapId)
+      .single();
+
+    if (creationError || !creationData) {
+      alert("Mindmap-Info konnte nicht geladen werden.");
+      return;
+    }
+
+    const isAdmin = creationData.admin_ip === ip;
+
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert([{
+        nickname: input,
+        ipadress: ip,
+        locked: false,
+        admin: isAdmin,
+        //locked_until: lockUntil,
+        mindmap_id: mindmapId
+      }]);
+
+    if (isAdmin) console.log("✅ Adminrechte zugewiesen");
+
+
+
+
+
+
+    if (insertError) {
+      alert("Fehler beim Speichern: " + insertError.message);
+      return;
+    }
+
+    // ✅ Nutzer erfolgreich gespeichert
+    userNickname = input;
+    //sessionStorage.setItem("mindmap_nickname", userNickname);
+    localStorage.setItem("mindmap_nickname", userNickname);
+    document.getElementById('nicknameModal')?.remove();
+    startIpLockWatcher(ip);
+    console.log("Neuer Nutzer gespeichert & Zugriff erlaubt:", userNickname);
+
+  } catch (err) {
+    console.error("Fehler bei Nickname-Speicherung:", err);
+    alert("Fehler beim Speichern.");
+  }
 };
+
 
 
 
@@ -945,12 +1071,52 @@ window.addEventListener('load', async () => {
   // Modal vorbereiten, aber noch nicht zeigen
   createNicknameModal();
 
-  const nickname = sessionStorage.getItem("mindmap_nickname");
+  //const nickname = sessionStorage.getItem("mindmap_nickname");
+  const nickname = localStorage.getItem("mindmap_nickname");
+  /*
   if (nickname) {
-    console.log("Nickname aus SessionStorage:", nickname);
+    //console.log("Nickname aus SessionStorage:", nickname);
+    console.log("Nickname aus LocalStorage:", nickname);
     userNickname = nickname;
     return;
+  }*/
+
+  if (nickname) {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('nickname, locked, mindmap_id')
+      .eq('nickname', nickname)
+      .maybeSingle();
+
+    if (error || !user || user.locked) {
+      console.warn("Nickname lokal vorhanden, aber in der DB ungültig oder gesperrt.");
+      showNicknameModal();
+      return;
+    }
+
+    const allowedMaps = user.mindmap_id || [];
+    if (!allowedMaps.includes(mindmapId)) {
+      console.warn("Nickname erlaubt, aber kein Zugriff auf diese Mindmap.");
+      showNicknameModal();
+      return;
+    }
+
+    userNickname = nickname;
+    startIpLockWatcher(user.ipadress);
+    document.getElementById('nicknameModal')?.remove();
+    console.log("Validierter lokaler Nutzer:", userNickname);
+    return;
+
+  } catch (err) {
+    console.error("Fehler bei lokaler Nickname-Validierung:", err);
+    showNicknameModal();
+    return;
   }
+}
+
+
+  
 
   let ip = 'unknown';
   try {
@@ -964,6 +1130,35 @@ window.addEventListener('load', async () => {
   }
 
   try {
+
+    const { data: user, error } = await supabase
+    .from('users')
+    .select('nickname, locked, mindmap_id')
+    .eq('ipadress', ip)
+    .maybeSingle();
+
+    if (error || !user || user.locked === true) {
+      console.warn("Keine gültige Sitzung oder gesperrt.");
+      showNicknameModal();
+      return;
+    }
+
+    const allowedMaps = user.mindmap_id || [];
+    if (!allowedMaps.includes(mindmapId)) {
+      console.warn("IP bekannt, aber kein Zugriff auf diese Mindmap.");
+      showNicknameModal();
+      return;
+    }
+
+    // ✅ Zugriff erlaubt
+    userNickname = user.nickname;
+    //sessionStorage.setItem("mindmap_nickname", userNickname);
+    localStorage.setItem("mindmap_nickname", userNickname);
+    document.getElementById('nicknameModal')?.remove();
+    console.log("Automatisch eingeloggt als:", userNickname);
+    startIpLockWatcher(ip);
+  
+    /*
     const { data: user, error } = await supabase
       .from('users')
       .select('nickname, locked')
@@ -984,12 +1179,12 @@ window.addEventListener('load', async () => {
     // Modal entfernen, falls vorhanden
     document.getElementById('nicknameModal')?.remove();
 
-    startIpLockWatcher(ip);
+    startIpLockWatcher(ip);*/
   } catch (err) {
     console.error("Fehler bei automatischem Login:", err);
     showNicknameModal();
   }
-});
+}  );
 
 
 
@@ -997,7 +1192,8 @@ window.addEventListener('load', async () => {
 
 
 function showNicknameModal() {
-  sessionStorage.removeItem("mindmap_nickname");
+  //sessionStorage.removeItem("mindmap_nickname");
+  localStorage.removeItem("mindmap_nickname");
   document.getElementById('nicknameModal').style.display = 'flex';
 }
 
@@ -1027,3 +1223,57 @@ function startIpLockWatcher(ip) {
 
   checkLock();
 }
+
+
+
+
+
+
+async function loadUsersForCurrentMindmap() {
+  const mindmapId = new URLSearchParams(window.location.search).get('id');
+  const container = document.getElementById('userListContainer');
+  container.innerHTML = ''; // vorher leeren
+
+  if (!mindmapId) {
+    container.textContent = "Keine gültige Mindmap-ID.";
+    return;
+  }
+
+  const { data: users, error } = await supabase
+    .from('users')
+    .select('nickname, locked, admin')
+    .eq('mindmap_id', mindmapId); // alle Nutzer, deren Array die ID enthält
+
+  if (error) {
+    container.textContent = "Fehler beim Laden der Nutzer.";
+    console.error("Fehler beim Laden der User:", error.message);
+    return;
+  }
+
+  if (!users || users.length === 0) {
+    container.textContent = "Keine Nutzer gefunden.";
+    return;
+  }
+
+  users.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'user-entry';
+    if (user.locked) div.classList.add('locked');
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = user.nickname;
+    div.appendChild(nameSpan);
+
+    if (user.admin) {
+      const badge = document.createElement('span');
+      badge.className = 'badge admin';
+      badge.textContent = 'Admin';
+      div.appendChild(badge);
+    }
+
+    container.appendChild(div);
+  });
+}
+
+
+window.loadUsersForCurrentMindmap = loadUsersForCurrentMindmap;
