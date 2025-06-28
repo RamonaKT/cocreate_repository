@@ -81,3 +81,36 @@ button.close {
   font-weight: bold;
   font-size: 0.8em;
 }
+
+
+
+
+#ipLockOverlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: none; /* wird später auf flex gesetzt */
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+#ipLockOverlay .overlay-box {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  min-width: 300px;
+  text-align: center;
+}
+
+#ipLockOverlay .overlay-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+  gap: 10px;
+}
+
+#ipLockOverlay button {
+  padding: 8px 16px;
+}

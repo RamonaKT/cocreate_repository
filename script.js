@@ -960,7 +960,8 @@ window.submitNickname = async function () {
 
   try {
     // 🕵️ Nutzer mit Nickname suchen
-    const { data: existingUser, error } = await supabase
+    // beschränkung jeder Nickname nur einmal
+    /*const { data: existingUser, error } = await supabase
       .from('users')
       .select('nickname, locked, mindmap_id')
       .eq('nickname', input)
@@ -992,7 +993,32 @@ window.submitNickname = async function () {
       startIpLockWatcher(ip);
       console.log("Bestehender Nutzer angemeldet:", userNickname);
       return;
-    }
+    }*/
+// versuch dass pro Mindmap nur jeder nickname einmal, aber sonst häufiger
+    const { data: existingUser, error } = await supabase
+  .from('users')
+  .select('*')
+  .eq('nickname', input)
+  .eq('mindmap_id', mindmapId)
+  .maybeSingle();
+
+if (error) {
+  alert("Fehler beim Überprüfen des Nicknames.");
+  return;
+}
+
+if (existingUser) {
+  if (existingUser.locked) {
+    alert("Dieser Nickname ist aktuell gesperrt.");
+    return;
+  }
+  alert("Dieser Nickname ist für diese Mindmap bereits vergeben.");
+  return;
+}
+
+
+
+
 
     // ➕ Neuen Nutzer erstellen mit mindmapId
     const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -1021,8 +1047,8 @@ window.submitNickname = async function () {
     }
 
     const isAdmin = creationData.admin_ip === ip;
-
-    const { error: insertError } = await supabase
+// beschränkung jeder nickname nur einmal
+    /*const { error: insertError } = await supabase
       .from('users')
       .insert([{
         nickname: input,
@@ -1031,7 +1057,19 @@ window.submitNickname = async function () {
         admin: isAdmin,
         //locked_until: lockUntil,
         mindmap_id: mindmapId
-      }]);
+      }]);*/
+
+// versuch dass pro Mindmap nur jeder nickname einmal, aber sonst häufiger
+      const { error: insertError } = await supabase
+  .from('users')
+  .insert([{
+    nickname: input,
+    ipadress: ip,
+    locked: false,
+    admin: isAdmin,
+    mindmap_id: parseInt(mindmapId)
+  }]);
+
 
     if (isAdmin) console.log("✅ Adminrechte zugewiesen");
 
@@ -1325,8 +1363,8 @@ async function loadUsersForCurrentMindmap() {
 
   const { data: users, error } = await supabase
     .from('users')
-    .select('nickname, locked, admin')
-    .eq('mindmap_id', mindmapId); // alle Nutzer, deren Array die ID enthält
+    .select('nickname, locked, admin, ipadress')
+    .eq('mindmap_id', mindmapId);
 
   if (error) {
     container.textContent = "Fehler beim Laden der Nutzer.";
@@ -1338,6 +1376,9 @@ async function loadUsersForCurrentMindmap() {
     container.textContent = "Keine Nutzer gefunden.";
     return;
   }
+
+  const currentUser = users.find(u => u.nickname === userNickname);
+  const isAdmin = currentUser?.admin;
 
   users.forEach(user => {
     const div = document.createElement('div');
@@ -1355,9 +1396,78 @@ async function loadUsersForCurrentMindmap() {
       div.appendChild(badge);
     }
 
+    if (isAdmin && user.nickname !== userNickname) {
+      div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        userToLock = user.nickname;
+        document.getElementById('dialogIconOverviewUser').close();
+
+        document.getElementById('ipLockOverlay').style.display = 'flex';
+        document.getElementById('overlayMessage').textContent =
+          `Do you want to lock IP from "${user.nickname}" ?`;
+      });
+    }
+
     container.appendChild(div);
   });
 }
 
 
+
+
+
+
+
+
+
+
+
+async function lockUserByNickname(nickname) {
+  const { error } = await supabase
+    .from('users')
+    .update({ locked: true })
+    .eq('nickname', nickname);
+
+  if (error) {
+    alert("Error while locking: " + error.message);
+    return;
+  }
+
+  //alert(`User "${nickname}" was locked.`);
+  //loadAndDisplayAllUsers(); //update list
+}
+
+
+
+document.getElementById('confirmLockBtn').addEventListener('click', async () => {
+  if (userToLock) {
+    await lockUserByNickname(userToLock);
+
+    // show confirmation in overlay
+    const messageBox = document.getElementById('overlayMessage');
+    messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
+
+    // don´t show buttons
+    document.querySelector('.overlay-buttons').style.display = 'none';
+
+    // close overlay after two seconds
+    setTimeout(() => {
+      document.getElementById('ipLockOverlay').style.display = 'none';
+      document.querySelector('.overlay-buttons').style.display = 'flex';
+      userToLock = null;
+    }, 2000);
+  }
+});
+
+
+document.getElementById('cancelLockBtn').addEventListener('click', () => {
+  userToLock = null;
+  document.getElementById('ipLockOverlay').style.display = 'none';
+});
+
+
 window.loadUsersForCurrentMindmap = loadUsersForCurrentMindmap;
+
+
+
+
