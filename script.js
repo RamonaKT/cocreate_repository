@@ -271,8 +271,8 @@ window.onload = async () => {
     console.error('Fehler bei der Verbindung zu Supabase:', error);
   }
 
-  //const nickname = sessionStorage.getItem("mindmap_nickname");
-  const nickname = localStorage.getItem("mindmap_nickname");
+  const nickname = sessionStorage.getItem("mindmap_nickname");
+  //const nickname = localStorage.getItem("mindmap_nickname");
   const params = new URLSearchParams(window.location.search);
   const mindmapId = params.get('id');
 
@@ -1071,8 +1071,8 @@ window.addEventListener('load', async () => {
   // Modal vorbereiten, aber noch nicht zeigen
   createNicknameModal();
 
-  //const nickname = sessionStorage.getItem("mindmap_nickname");
-  const nickname = localStorage.getItem("mindmap_nickname");
+  const nickname = sessionStorage.getItem("mindmap_nickname");
+  //const nickname = localStorage.getItem("mindmap_nickname");
   /*
   if (nickname) {
     //console.log("Nickname aus SessionStorage:", nickname);
@@ -1152,8 +1152,8 @@ window.addEventListener('load', async () => {
 
     // ✅ Zugriff erlaubt
     userNickname = user.nickname;
-    //sessionStorage.setItem("mindmap_nickname", userNickname);
-    localStorage.setItem("mindmap_nickname", userNickname);
+    sessionStorage.setItem("mindmap_nickname", userNickname);
+    //localStorage.setItem("mindmap_nickname", userNickname);
     document.getElementById('nicknameModal')?.remove();
     console.log("Automatisch eingeloggt als:", userNickname);
     startIpLockWatcher(ip);
@@ -1192,8 +1192,8 @@ window.addEventListener('load', async () => {
 
 
 function showNicknameModal() {
-  //sessionStorage.removeItem("mindmap_nickname");
-  localStorage.removeItem("mindmap_nickname");
+  sessionStorage.removeItem("mindmap_nickname");
+  //localStorage.removeItem("mindmap_nickname");
   document.getElementById('nicknameModal').style.display = 'flex';
 }
 
