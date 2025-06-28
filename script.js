@@ -1063,7 +1063,7 @@ window.submitNickname = async function () {
 
 
 
-
+/*
 window.addEventListener('load', async () => {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
   if (!mindmapId) return;
@@ -1080,14 +1080,17 @@ window.addEventListener('load', async () => {
     userNickname = nickname;
     return;
   }*/
-
+/*
   if (nickname) {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('nickname, locked, mindmap_id')
+      .select('nickname, locked, mindmap_id, ipadress')
+      .eq('ipadress', ip)
       .eq('nickname', nickname)
+      .eq('mindmap_id', parseInt(mindmapId))
       .maybeSingle();
+
 
     if (error || !user || user.locked) {
       console.warn("Nickname lokal vorhanden, aber in der DB ungültig oder gesperrt.");
@@ -1114,6 +1117,8 @@ window.addEventListener('load', async () => {
     return;
   }
 }
+
+
 
 
   
@@ -1156,7 +1161,7 @@ window.addEventListener('load', async () => {
     //localStorage.setItem("mindmap_nickname", userNickname);
     document.getElementById('nicknameModal')?.remove();
     console.log("Automatisch eingeloggt als:", userNickname);
-    startIpLockWatcher(ip);
+    startIpLockWatcher(ip);*/
   
     /*
     const { data: user, error } = await supabase
@@ -1179,12 +1184,91 @@ window.addEventListener('load', async () => {
     // Modal entfernen, falls vorhanden
     document.getElementById('nicknameModal')?.remove();
 
-    startIpLockWatcher(ip);*/
+    startIpLockWatcher(ip);*//*
   } catch (err) {
     console.error("Fehler bei automatischem Login:", err);
     showNicknameModal();
   }
-}  );
+}  );*/
+
+
+
+window.addEventListener('load', async () => {
+  const mindmapId = new URLSearchParams(window.location.search).get('id');
+  if (!mindmapId) return;
+
+  // Modal vorbereiten, aber noch nicht zeigen
+  createNicknameModal();
+
+  let ip = 'unknown';
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+  } catch (err) {
+    console.warn("IP konnte nicht ermittelt werden:", err);
+    showNicknameModal();
+    return;
+  }
+
+  // Zuerst: nickname aus localStorage versuchen
+  const storedNickname = localStorage.getItem("mindmap_nickname");
+
+  if (storedNickname) {
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('nickname', storedNickname)
+        .eq('ipadress', ip)
+        .maybeSingle();
+
+      if (!error && user && !user.locked && user.mindmap_id == mindmapId) {
+        userNickname = storedNickname;
+        console.log("✅ Automatisch eingeloggt:", userNickname);
+        document.getElementById('nicknameModal')?.remove();
+        startIpLockWatcher(ip);
+        return;
+      }
+    } catch (e) {
+      console.error("Fehler bei Login mit gespeicherten Nickname:", e);
+    }
+  }
+
+  // Wenn nicht: per IP nach gültigem Nutzer suchen
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('ipadress', ip)
+      .eq('mindmap_id', mindmapId)
+      .maybeSingle();
+
+    if (!error && user && !user.locked) {
+      userNickname = user.nickname;
+      localStorage.setItem("mindmap_nickname", userNickname);
+      console.log("✅ Automatisch über IP eingeloggt:", userNickname);
+      document.getElementById('nicknameModal')?.remove();
+      startIpLockWatcher(ip);
+      return;
+    }
+
+  } catch (err) {
+    console.error("Fehler bei Login über IP:", err);
+  }
+
+  // Wenn alle Stricke reißen, Nickname-Modal anzeigen
+  showNicknameModal();
+});
+
+
+
+
+
+
+
+
+
 
 
 
