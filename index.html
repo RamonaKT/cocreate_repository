@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="./css/outer.css">
   <link rel="stylesheet" href="./css/navigation.css">
   <link rel="stylesheet" href="./css/workspace.css">
+
 </head>
 <body>
 
@@ -28,36 +29,36 @@
 
     <!-- NUR ADMIN (user sperren, was sonst noch settings? link erstellen, ) -->
       <img src="./img/icon-gear.jpeg" alt="Icon settings"
-       style="cursor: pointer;" onclick="document.getElementById('dialogIconSettings').showModal()">
+       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconSettings').showModal()">
 
     <dialog id="dialogIconSettings">
       <h2>Einstellungen</h2>
       <p>Hier soll z.B. der Admin Nutzer (IP-Adressen) sperren können.</p>
-      <button class="close"  onclick="document.getElementById('dialogIconSettings').close()">Schließen</button>
+      <button class="close" draggable="false" onclick="document.getElementById('dialogIconSettings').close()">Schließen</button>
     </dialog>
 
     <!-- NUR ADMIN -->
       <img src="./img/icon-plus.jpeg" alt="Icon add" 
-       style="cursor: pointer;" onclick="document.getElementById('dialogIconAdd').showModal()">
+       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconAdd').showModal()">
 
     <dialog id="dialogIconAdd">
       <h2>Neuen Raum hinzufügen</h2>
       <p>Hier soll der Admin neue Unterräume erzuegen können. 
         Wenn möglich abfragen, ob der Inhalt kopiert werden soll.</p>
-      <button class="close"  onclick="document.getElementById('dialogIconAdd').close()">Schließen</button>
+      <button class="close" draggable="false" onclick="document.getElementById('dialogIconAdd').close()">Schließen</button>
     </dialog>
 
        <img src="./img/icon-pattern.jpeg" alt="Icon room overview"
-       style="cursor: pointer;" onclick="document.getElementById('dialogIconOverviewRooms').showModal()">
+       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconOverviewRooms').showModal()">
 
     <dialog id="dialogIconOverviewRooms">
       <h2>Übersicht der Räume</h2>
       <p>Hier soll ein Übersicht über offene Räume zu sehen sein. Das Icon soll nur sichtbar sein, wenn mehrere Räume existieren</p>
-      <button class="close"  onclick="document.getElementById('dialogIconOverviewRooms').close()">Schließen</button>
+      <button class="close" draggable="false" onclick="document.getElementById('dialogIconOverviewRooms').close()">Schließen</button>
     </dialog>
 
        <img src="./img/icon-pen.jpeg" alt="Icon edit username"
-       style="cursor: pointer;" onclick="document.getElementById('dialogIconEdit').showModal()">
+       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconEdit').showModal()">
 
     <dialog id="dialogIconEdit">
       <h2>Setze deinen Anzeigenamen!</h2>
@@ -71,7 +72,7 @@
     </dialog>
 
       <img src="./img/icon-eye.jpeg" alt="Icon edit username"
-       style="cursor: pointer;" onclick="document.getElementById('dialogIconOverviewUser').showModal()">
+       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconOverviewUser').showModal()">
 
     <dialog id="dialogIconOverviewUser">
       <h2>Übersicht der Teilnehmer</h2>
@@ -79,12 +80,24 @@
       <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
     </dialog>
 
+    
+
   </div>
+  <button class="pdfButton" onclick="exportMindmapToPDF()">Download PDF</button>
   
   <svg id="mindmap" width="1000" height="600"></svg>
   
+
+  <button id="saveButton">💾 Speichern</button>
+
 </div>
 
-<script src="./script.js"></script>
+
+
+
+
+<script type="module" src="./script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@1.4.0/dist/svg2pdf.min.js"></script>
 </body>
 </html>

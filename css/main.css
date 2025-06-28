@@ -35,3 +35,37 @@ button.close {
     margin-top: 10px;
     background-color: #797ec6;
 }
+
+.pdfButton {
+   background-color: #caeff0;
+    position: fixed;
+    margin: 0;
+    bottom: 10vh;
+    /*bottom: 220px;*/
+    left:1.5vw;
+    border-radius: 20px;
+    height: 75px;
+    width: 75px;
+    border-radius: 15%;
+}
+
+.pdfButton:hover {
+  background-color: #218838; /* Dunkleres Grün beim Hover */
+}
+
+#saveButton {
+     background-color: #caeff0;
+    position: fixed;
+    margin: 0;
+    bottom: 10vh;
+    /*bottom: 220px;*/
+    left:10vw;
+    border-radius: 20px;
+    height: 75px;
+    width: 75px;
+    border-radius: 15%;
+}
+
+#saveButton:hover {
+     background-color: #218838;
+}
