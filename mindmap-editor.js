@@ -364,3 +364,312 @@ class MindmapEditor extends HTMLElement {
 
 customElements.define('mindmap-editor', MindmapEditor);
 
+
+
+
+async function exportMindmapToPDF() {
+  const { jsPDF } = window.jspdf;
+
+  const svgElement = document.querySelector('mindmap-editor')?.shadowRoot?.getElementById('mindmap');
+  if (!svgElement) {
+    alert("Mindmap SVG nicht gefunden!");
+    return;
+  }
+  
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'pt',
+    format: [svgElement.clientWidth, svgElement.clientHeight],
+  });
+
+  // svg2pdf erwartet ein Promise (oder callback)
+  await window.svg2pdf(svgElement, pdf, {
+    xOffset: 0,
+    yOffset: 0,
+    scale: 1
+  });
+
+  pdf.save("mindmap.pdf");
+}
+
+
+
+
+/*
+const supabaseUrl = process.env.SUPABASEURL;
+const supabaseKey = process.env.SUPABASEKEY;
+*/
+const supabaseUrl = 'https://hnwelnphgipfckclbfzy.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhud2VsbnBoZ2lwZmNrY2xiZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTgwNDYsImV4cCI6MjA2NDg5NDA0Nn0.J7s9FgaGCuA110Ql2za713HWp_xP2jM21t96sWD-xSI';
+
+
+
+
+// Überprüfe, ob die Umgebungsvariablen korrekt geladen wurden
+if (!supabaseUrl || !supabaseKey) {
+    console.log('Supabase URL:', supabaseUrl);  // Gibt die URL aus
+    console.log('Supabase Key:', supabaseKey);  // Gibt den Key aus
+    console.error('Supabase URL oder Schlüssel fehlen!');
+    process.exit(1);
+}
+
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+
+
+
+let userNickname = null;
+
+window.submitNickname = async function () {
+  const input = document.getElementById('nicknameInput').value.trim();
+  if (!input) {
+    alert("Bitte gib einen Nickname ein.");
+    return;
+  }
+
+  let ip = 'unbekannt';
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+    console.log("IP-Adresse:", ip);
+  } catch (err) {
+    console.warn("IP konnte nicht ermittelt werden:", err);
+  }
+
+  // --- CHECK: Ist IP aktuell blockiert (locked_until in Zukunft)?
+  try {
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('locked_until')
+      .eq('ipadress', ip)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchError) {
+      alert("Fehler beim IP-Check: " + fetchError.message);
+      return;
+    }
+
+    if (existingUser?.locked_until) {
+      const now = new Date();
+      const until = new Date(existingUser.locked_until);
+      if (until > now) {
+        alert(`Diese IP ist noch bis ${until.toLocaleTimeString()} gesperrt für neue Nicknamen.`);
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("Fehler beim locked_until-Check:", err);
+    return;
+  }
+
+  // --- Admin-Check: erster User?
+  let isAdmin = false;
+  try {
+    const { data: existingUsers, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1);
+
+    if (checkError) {
+      alert("Fehler beim Admin-Check: " + checkError.message);
+      return;
+    }
+
+    isAdmin = existingUsers.length === 0;
+  } catch (err) {
+    console.warn("Fehler beim Admin-Check:", err);
+  }
+
+  // --- Neuen Nickname speichern mit 10-Minuten-Sperre
+  const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  const { error: insertError } = await supabase
+    .from('users')
+    .insert([{
+      nickname: input,
+      ipadress: ip,
+      admin: isAdmin,
+      locked_until: lockUntil
+    }]);
+
+  if (insertError) {
+    alert("Fehler beim Speichern: " + insertError.message);
+    return;
+  }
+
+  userNickname = input;
+  sessionStorage.setItem("mindmap_nickname", userNickname);
+  document.getElementById('nicknameModal').style.display = 'none';
+  console.log("Nickname gespeichert:", userNickname);
+};
+
+
+
+
+window.addEventListener('load', async () => {
+  let ip = 'unbekannt';
+
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+    console.log("IP-Adresse erkannt:", ip);
+  } catch (err) {
+    console.error("IP konnte nicht ermittelt werden:", err);
+    showNicknameModal();
+    return;
+  }
+
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('nickname, locked')
+      .eq('ipadress', ip)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Fehler bei der Benutzerprüfung:", error.message);
+      showNicknameModal();
+      return;
+    }
+
+    if (!user || user.locked === true) {
+      console.warn("Zugang gesperrt oder noch kein User für IP");
+      showNicknameModal();
+    } else {
+      userNickname = user.nickname;
+      sessionStorage.setItem("mindmap_nickname", userNickname);
+      document.getElementById('nicknameModal').style.display = 'none';
+      console.log("Benutzer automatisch erkannt:", userNickname);
+    }
+
+    startIpLockWatcher(ip);
+
+  } catch (err) {
+    console.error("Fehler bei der IP-Login-Logik:", err);
+    showNicknameModal();
+  }
+});
+
+function showNicknameModal() {
+  sessionStorage.removeItem("mindmap_nickname");
+  document.getElementById('nicknameModal').style.display = 'flex';
+}
+
+
+async function loadAndDisplayAllUsers() {
+  const container = document.getElementById('userListContainer');
+  if (!container) {
+    console.warn("Container für Nutzerliste nicht gefunden!");
+    return;
+  }
+
+  container.innerHTML = '';
+
+  const { data: allUsers, error } = await supabase
+    .from('users')
+    .select('nickname, locked, admin, ipadress');
+
+  if (error) {
+    console.error("Fehler beim Laden der Benutzer:", error.message);
+    return;
+  }
+
+  if (!userNickname) {
+    console.warn("Aktueller Benutzername nicht geladen.");
+    return;
+  }
+
+  const { data: currentUserData, error: selfError } = await supabase
+    .from('users')
+    .select('nickname, admin')
+    .eq('nickname', userNickname)
+    .maybeSingle();
+
+  if (selfError || !currentUserData) {
+    console.warn("Fehler beim Laden des aktuellen Users oder kein Treffer.");
+    return;
+  }
+
+  const isAdmin = currentUserData.admin;
+
+  allUsers.forEach(user => {
+  const div = document.createElement('div');
+  div.className = 'user-entry';
+  if (user.locked) div.classList.add('locked');
+
+  // Hauptname
+  const nameSpan = document.createElement('span');
+  nameSpan.textContent = user.nickname;
+  div.appendChild(nameSpan);
+
+  // Admin-Badge NUR wenn wirklich true
+  if (user.admin === true || user.admin === 'true' || user.admin === 1) {
+    const badge = document.createElement('span');
+    badge.className = 'badge admin';
+    badge.textContent = 'Admin';
+    div.appendChild(badge);
+  }
+
+  // Rechtsklick-Sperren (Admin → andere User)
+  if (isAdmin && user.nickname !== userNickname) {
+    div.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const confirmed = confirm(`Möchtest du die IP von "${user.nickname}" sperren?`);
+      if (confirmed) {
+        lockUserByNickname(user.nickname);
+      }
+    });
+  }
+
+  container.appendChild(div);
+});
+
+}
+
+
+async function lockUserByNickname(nickname) {
+  const { error } = await supabase
+    .from('users')
+    .update({ locked: true })
+    .eq('nickname', nickname);
+
+  if (error) {
+    alert("Fehler beim Sperren: " + error.message);
+    return;
+  }
+
+  alert(`Benutzer "${nickname}" wurde gesperrt.`);
+  loadAndDisplayAllUsers(); // Liste aktualisieren
+}
+
+
+function startIpLockWatcher(ip) {
+  setInterval(async () => {
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('locked')
+        .eq('ipadress', ip)
+        .eq('nickname', userNickname)  // ← zusätzlicher Filter
+        .maybeSingle();
+
+      if (error) {
+        console.error("Fehler beim Sperrcheck:", error.message);
+        return;
+      }
+
+      if (user && user.locked === true) {
+        console.warn("Zugang durch Sperre blockiert (Nickname oder IP)");
+        showNicknameModal();
+      }
+
+    } catch (err) {
+      console.error("Fehler beim automatischen Sperr-Check:", err);
+    }
+  }, 5000); // alle 5 Sekunden
+}
+
