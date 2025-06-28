@@ -253,6 +253,15 @@ async function loadMindmapFromDB(id) {
 }
 
 import { getCreations, saveCreation } from './supabase/database.js';  // Pfad anpassen
+/*
+window.onload = async () => {
+  try {
+    const creations = await getCreations();
+    console.log('Verbindung zu Supabase erfolgreich. Gefundene Daten:', creations);
+  } catch (error) {
+    console.error('Fehler bei der Verbindung zu Supabase:', error);
+  }
+};*/
 
 window.onload = async () => {
   try {
@@ -261,7 +270,16 @@ window.onload = async () => {
   } catch (error) {
     console.error('Fehler bei der Verbindung zu Supabase:', error);
   }
+
+  const nickname = sessionStorage.getItem("mindmap_nickname");
+  const params = new URLSearchParams(window.location.search);
+  const mindmapId = params.get('id');
+
+  if (mindmapId && !nickname) {
+    createNicknameModal(); // oder: document.getElementById('nicknameModal').style.display = 'block';
+  }
 };
+
 
 
 // saving mindmaps
@@ -801,3 +819,134 @@ async function exportMindmapToPDF() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function createNicknameModal() {
+  const modal = document.createElement('div');
+  modal.id = 'nicknameModal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  `;
+
+  modal.innerHTML = `
+    <div style="
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      text-align: center;
+    ">
+      <h2>Nickname wählen</h2>
+      <input id="nicknameInput" type="text" placeholder="Dein Nickname" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+      <button id="nicknameSubmitButton" style="padding: 6px 12px;">Speichern</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  document.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
+}
+
+
+
+
+
+
+window.submitNickname = async function () {
+  const input = document.getElementById('nicknameInput').value.trim();
+  if (!input) {
+    alert("Bitte Nickname eingeben.");
+    return;
+  }
+
+  let ip = 'unknown';
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+  } catch (err) {
+    console.warn("IP konnte nicht geladen werden:", err);
+  }
+
+  try {
+    const { data: existingUser, error } = await supabase
+      .from('users')
+      .select('locked_until')
+      .eq('ipadress', ip)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      alert("Fehler bei IP-Check: " + error.message);
+      return;
+    }
+
+    if (existingUser?.locked_until) {
+      const until = new Date(existingUser.locked_until);
+      if (until > new Date()) {
+        alert(`IP ist gesperrt bis ${until.toLocaleTimeString()}`);
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("Fehler beim Sperrprüfen:", err);
+    return;
+  }
+
+  let isAdmin = false;
+  try {
+    const { data: existingUsers } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1);
+
+    isAdmin = existingUsers.length === 0;
+  } catch (err) {
+    console.warn("Admin-Prüfung fehlgeschlagen:", err);
+  }
+
+  const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  const { error: insertError } = await supabase
+    .from('users')
+    .insert([{
+      nickname: input,
+      ipadress: ip,
+      admin: isAdmin,
+      locked_until: lockUntil
+    }]);
+
+  if (insertError) {
+    alert("Fehler beim Speichern: " + insertError.message);
+    return;
+  }
+
+  sessionStorage.setItem("mindmap_nickname", input);
+  document.getElementById('nicknameModal').remove();
+  console.log("Nickname gespeichert:", input);
+};

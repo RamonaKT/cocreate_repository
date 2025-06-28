@@ -28,14 +28,14 @@
   <div id="sidebar-left" class="sidebar">
 
     <!-- NUR ADMIN (user sperren, was sonst noch settings? link erstellen, ) -->
-      <img src="./img/icon-gear.jpeg" alt="Icon settings"
+     <!-- <img src="./img/icon-gear.jpeg" alt="Icon settings"
        style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconSettings').showModal()">
 
     <dialog id="dialogIconSettings">
       <h2>Einstellungen</h2>
       <p>Hier soll z.B. der Admin Nutzer (IP-Adressen) sperren können.</p>
       <button class="close" draggable="false" onclick="document.getElementById('dialogIconSettings').close()">Schließen</button>
-    </dialog>
+    </dialog>-->
 
     <!-- NUR ADMIN -->
       <img src="./img/icon-plus.jpeg" alt="Icon add" 
@@ -59,7 +59,7 @@
 
        <img src="./img/icon-pen.jpeg" alt="Icon edit username"
        style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconEdit').showModal()">
-
+<!--
     <dialog id="dialogIconEdit">
       <h2>Setze deinen Anzeigenamen!</h2>
       <p>Hier soll man seinen nickname ändern können. 
@@ -69,15 +69,15 @@
       <button onclick="send('setNickname',{value:document.getElementById('setNickname').value})">Festlegen</button>
       <br>
       <button class="close" onclick="document.getElementById('dialogIconEdit').close()">Schließen</button>
-    </dialog>
+    </dialog>-->
 
       <img src="./img/icon-eye.jpeg" alt="Icon edit username"
        style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconOverviewUser').showModal()">
 
     <dialog id="dialogIconOverviewUser">
       <h2>Übersicht der Teilnehmer</h2>
-      <p>Hier soll eine Übersicht über die Nutzer erscheinen.</p>
-      <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
+      <div id="userListContainer"></div> <!-- ⬅ Hier werden die Nicknames eingefügt -->
+      <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button> 
     </dialog>
 
     
@@ -85,12 +85,37 @@
   </div>
   <button class="pdfButton" onclick="exportMindmapToPDF()">Download PDF</button>
   
+<div id="ipLockOverlay" style="display: none;">
+  <div class="overlay-box">
+    <p id="overlayMessage">Möchtest du diese IP wirklich sperren?</p>
+    <div class="overlay-buttons">
+      <button id="confirmLockBtn">Ja, sperren</button>
+      <button id="cancelLockBtn">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+
+
   <svg id="mindmap" width="1000" height="600"></svg>
   
 
   <button id="saveButton">💾 Speichern</button>
 
 </div>
+
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
 
 
 
