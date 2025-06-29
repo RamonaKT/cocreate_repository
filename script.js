@@ -958,6 +958,81 @@ window.submitNickname = async function () {
     console.warn("IP konnte nicht ermittelt werden:", err);
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const { data: existingLocks, error: lockError } = await supabase
+  .from('users')
+  .select('locked, locked_until')
+  .eq('ipadress', ip)
+  .eq('mindmap_id', mindmapId);
+
+if (lockError) {
+  alert("Fehler beim Sperr-Check.");
+  return;
+}
+
+const now = new Date();
+const anyLocked = existingLocks?.some(user =>
+  user.locked && (!user.locked_until || new Date(user.locked_until) > now)
+);
+
+if (anyLocked) {
+  alert("Du bist für diese Mindmap aktuell gesperrt.");
+  return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   try {
     // 🕵️ Nutzer mit Nickname suchen
     // beschränkung jeder Nickname nur einmal
@@ -1249,6 +1324,51 @@ window.addEventListener('load', async () => {
     return;
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // 🔒 Sofort Sperre prüfen
+  startIpLockWatcher(ip);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // Zuerst: nickname aus localStorage versuchen
   const storedNickname = localStorage.getItem("mindmap_nickname");
 
@@ -1387,7 +1507,7 @@ function startIpLockWatcher(ip) {
 
 
 
-
+/*
 function startIpLockWatcher(ip) {
   async function checkLock() {
     const mindmapId = new URLSearchParams(window.location.search).get('id');
@@ -1427,6 +1547,55 @@ function startIpLockWatcher(ip) {
     }
 
     setTimeout(checkLock, 5000); // alle 5 Sekunden prüfen
+  }
+
+  checkLock();
+}*/
+
+
+
+
+
+function startIpLockWatcher(ip) {
+  async function checkLock() {
+    const mindmapId = new URLSearchParams(window.location.search).get('id');
+    try {
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('nickname, locked, locked_until')
+        .eq('ipadress', ip)
+        .eq('mindmap_id', mindmapId);
+
+      if (error) {
+        console.error("Fehler bei Lock-Check:", error.message);
+      } else {
+        const now = new Date();
+
+        for (const user of users) {
+          if (user.locked) {
+            const until = user.locked_until ? new Date(user.locked_until) : null;
+            if (until && now >= until) {
+              // ⏱ Sperre ist abgelaufen → entsperren
+              await supabase
+                .from('users')
+                .update({ locked: false, locked_until: null })
+                .eq('nickname', user.nickname)
+                .eq('mindmap_id', mindmapId);
+              console.log(`🔓 Nutzer ${user.nickname} automatisch entsperrt.`);
+            } else {
+              // ❌ Noch gesperrt
+              console.warn(`🔒 Nutzer ${user.nickname} ist noch gesperrt.`);
+              showNicknameModal();
+              return;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Fehler bei Lock-Überprüfung:", err);
+    }
+
+    setTimeout(checkLock, 5000);
   }
 
   checkLock();
