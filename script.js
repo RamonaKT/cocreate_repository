@@ -830,21 +830,14 @@ function createNicknameModal() {
 
   const modal = document.createElement('div');
   modal.id = 'nicknameModal';
-  modal.style.cssText = `
-    position: fixed; top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 9999;
-    display: none; align-items: center; justify-content: center;
-  `;
 
   modal.innerHTML = `
-    <div style="background: white; padding: 20px; border-radius: 10px; width: 300px; text-align: center;">
-      <h2>Nickname wählen</h2>
-      <input id="nicknameInput" type="text" placeholder="Dein Nickname" style="width: 100%; padding: 8px;" />
-      <button id="nicknameSubmitButton" style="margin-top: 10px;">Speichern</button>
-    </div>
-  `;
+  <div class="modal-content">
+    <h2>Nickname wählen</h2>
+    <input id="nicknameInput" type="text" placeholder="Dein Nickname" />
+    <button id="nicknameSubmitButton">Speichern</button>
+  </div>
+`;
 
   document.body.appendChild(modal);
 
