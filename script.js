@@ -849,6 +849,15 @@ function createNicknameModal() {
   document.body.appendChild(modal);
 
   document.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
+
+
+document.getElementById('nicknameInput').addEventListener('keydown', function (event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    submitNickname();
+  }
+});
+
 }
 
 
