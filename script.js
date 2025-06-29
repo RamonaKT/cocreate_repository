@@ -1319,6 +1319,25 @@ function showNicknameModal() {
   document.getElementById('nicknameModal').style.display = 'flex';
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 function startIpLockWatcher(ip) {
   async function checkLock() {
     try {
@@ -1344,7 +1363,108 @@ function startIpLockWatcher(ip) {
   }
 
   checkLock();
+}*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function startIpLockWatcher(ip) {
+  async function checkLock() {
+    const mindmapId = new URLSearchParams(window.location.search).get('id');
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('locked, locked_until')
+        .eq('ipadress', ip)
+        .eq('nickname', userNickname)
+        .eq('mindmap_id', mindmapId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Fehler bei Lock-Check:", error.message);
+      } else if (user?.locked) {
+        const now = new Date();
+        const until = user.locked_until ? new Date(user.locked_until) : null;
+
+        if (until && now >= until) {
+          // ⏱ Sperre ist abgelaufen → entsperren
+          await supabase
+            .from('users')
+            .update({ locked: false, locked_until: null })
+            .eq('ipadress', ip)
+            .eq('nickname', userNickname)
+            .eq('mindmap_id', mindmapId);
+
+          console.log("🔓 Sperre automatisch aufgehoben.");
+        } else {
+          console.warn("🔒 Nutzer ist gesperrt, redirect zum Nickname-Modal.");
+          showNicknameModal();
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Fehler bei Lock-Überprüfung:", err);
+    }
+
+    setTimeout(checkLock, 5000); // alle 5 Sekunden prüfen
+  }
+
+  checkLock();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1422,6 +1542,23 @@ async function loadUsersForCurrentMindmap() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 async function lockUserByNickname(nickname) {
   const { error } = await supabase
     .from('users')
@@ -1435,7 +1572,84 @@ async function lockUserByNickname(nickname) {
 
   //alert(`User "${nickname}" was locked.`);
   //loadAndDisplayAllUsers(); //update list
+}*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function lockUserByNickname(nickname) {
+  const lockUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 Minuten
+
+  const { error } = await supabase
+    .from('users')
+    .update({ locked: true, locked_until: lockUntil })
+    .eq('nickname', nickname);
+
+  if (error) {
+    alert("Fehler beim Sperren: " + error.message);
+    return;
+  }
+
+  console.log(`User "${nickname}" wurde bis ${lockUntil} gesperrt.`);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
