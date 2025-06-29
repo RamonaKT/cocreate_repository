@@ -1432,12 +1432,31 @@ window.addEventListener('load', async () => {
 
 
 
-
+/*
 function showNicknameModal() {
   sessionStorage.removeItem("mindmap_nickname");
   //localStorage.removeItem("mindmap_nickname");
   document.getElementById('nicknameModal').style.display = 'flex';
+}*/
+
+function showNicknameModal() {
+  let modal = document.getElementById('nicknameModal');
+
+  if (!modal) {
+    createNicknameModal();
+    modal = document.getElementById('nicknameModal');
+  }
+
+  if (modal) {
+    modal.style.display = 'flex';
+  } else {
+    console.error("❌ Konnte Modal nicht anzeigen, da es nicht existiert.");
+  }
+
+  sessionStorage.removeItem("mindmap_nickname");
+  localStorage.removeItem("mindmap_nickname");
 }
+
 
 
 
