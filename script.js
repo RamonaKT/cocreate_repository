@@ -1,4 +1,7 @@
 import { supabase } from './supabase/client.js';
+import { randomUUID } from 'crypto';
+const id = randomUUID();
+
 
 const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
