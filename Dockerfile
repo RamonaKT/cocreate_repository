@@ -30,8 +30,8 @@ RUN npm install
 COPY . .
 
 # Portfreigaben (Vite + y-websocket)
-EXPOSE 5173
 EXPOSE 1234
+EXPOSE 1235
 
 # Startbefehl
 CMD ["npm", "run", "start"]

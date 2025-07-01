@@ -1,7 +1,10 @@
 // vite.config.ts
-export default {
+
+import { defineConfig } from 'vite'
+
+export default defineConfig({
     server: {
-        host: '0.0.0.0', // ← wichtig!
-        port: 5173,
+        host: '0.0.0.0',
+        port: 1235,
     },
-};
+});

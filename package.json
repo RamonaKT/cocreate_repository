@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite",
+    "dev": "vite --port 1235",
     "build": "vite build",
     "preview": "vite preview",
     "start:ws": "y-websocket-server --port 1234",
