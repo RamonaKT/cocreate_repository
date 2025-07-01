@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite",
+    "dev": "vite --port 1235",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:ws": "y-websocket-server --port 1234",
+    "start": "concurrently \"npm run dev\" \"npm run start:ws\""
   },
   "repository": {
     "type": "git",
@@ -22,6 +24,7 @@
   },
   "homepage": "https://github.com/RamonaKT/cocreate_repository#readme",
   "devDependencies": {
+    "concurrently": "^9.2.0",
     "vite": "^6.3.5"
   },
   "dependencies": {

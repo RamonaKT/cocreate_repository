@@ -18,8 +18,14 @@ if (mindmapId) {
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 
+/*const ydoc = new Y.Doc();
+const provider = new WebsocketProvider('ws://localhost:1234', mindmapId, ydoc);*/
+const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:1234';
+
 const ydoc = new Y.Doc();
-const provider = new WebsocketProvider('ws://localhost:1234', mindmapId, ydoc);
+const provider = new WebsocketProvider(wsUrl, mindmapId, ydoc);
+
+
 
 // Gemeinsame Datenstrukturen
 const yNodes = ydoc.getMap('nodes');        // id => {x, y, type, label}
