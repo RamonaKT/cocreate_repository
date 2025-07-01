@@ -1,42 +1,37 @@
 # Basis-Image mit Node.js
-FROM node:20-alpine
-
-# Globale Installation von http-server
-RUN npm install -g http-server
-
-# Arbeitsverzeichnis im Container
-WORKDIR /app
-
-# Alle Dateien ins Image kopieren
-COPY . .
-
-# Port freigeben
-EXPOSE 8080
-#
-# Startbefehl
-CMD ["http-server", "-p", "8080"]
-
-########################
-# Basis-Image mit Node.js
 #FROM node:20-alpine
 
-# Arbeitsverzeichnis
+# Globale Installation von http-server
+#RUN npm install -g http-server
+
+# Arbeitsverzeichnis im Container
 #WORKDIR /app
 
-# Projektdateien kopieren
+# Alle Dateien ins Image kopieren
 #COPY . .
 
-# Abhängigkeiten installieren
-#RUN npm install
+# Port freigeben
+#EXPOSE 8080
+#
+# Startbefehl
+#CMD ["http-server", "-p", "8080"]
 
-# Start-Skript kopieren und ausführbar machen
-#COPY start.sh .
-#RUN chmod +x ./start.sh
+# Basis-Image
+FROM node:20-alpine
 
-# Ports freigeben
-#EXPOSE 5173
-#EXPOSE 1234
+# Arbeitsverzeichnis
+WORKDIR /app
+
+# Package-Dateien zuerst kopieren und Abhängigkeiten installieren
+COPY package*.json ./
+RUN npm install
+
+# Projektdateien kopieren
+COPY . .
+
+# Portfreigaben (Vite + y-websocket)
+EXPOSE 5173
+EXPOSE 1234
 
 # Startbefehl
-#CMD ["./start.sh"]
-
+CMD ["npm", "run", "start"]
