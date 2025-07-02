@@ -24,6 +24,18 @@ const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:1234';
 const ydoc = new Y.Doc();
 const provider = new WebsocketProvider(wsUrl, mindmapId, ydoc);
 
+function createUUID() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  // Fallback: einfache, sichere UUID-Alternative
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 
 
 // Gemeinsame Datenstrukturen
@@ -356,7 +368,10 @@ function createDraggableNode(x, y, type, idOverride, fromNetwork = false) {
   if (!style) return;
 
   //const id = 'node' + allNodes.length;
-  const id = idOverride || 'node' + window.crypto.randomUUID();
+const id = idOverride || 'node' + createUUID();
+console.log('randomUUID exists?', !!window.crypto?.randomUUID);
+
+
 
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
   group.setAttribute("class", "draggable");
