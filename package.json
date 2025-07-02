@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start:ws": "y-websocket-server --port 1234",
-    "start": "concurrently \"npm run dev\" \"npm run start:ws\""
+    "start": "concurrently \"npm run dev\""
   },
   "repository": {
     "type": "git",
