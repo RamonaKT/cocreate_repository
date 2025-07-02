@@ -356,7 +356,7 @@ function createDraggableNode(x, y, type, idOverride, fromNetwork = false) {
   if (!style) return;
 
   //const id = 'node' + allNodes.length;
-  const id = idOverride || 'node' + crypto.randomUUID();
+  const id = idOverride || 'node' + window.crypto.randomUUID();
 
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
   group.setAttribute("class", "draggable");
