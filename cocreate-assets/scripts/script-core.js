@@ -9,6 +9,7 @@ let initialSyncDone = false;
 
 //const svg = document.getElementById('mindmap');
 
+let dragLine = null; 
 
 let svg = null;
 
