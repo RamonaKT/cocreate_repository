@@ -14,6 +14,326 @@ let dragLine = null;
 let svg = null;
 
 
+
+
+function addEventListenersToNode(group, id, r) {
+  const node = allNodes.find(n => n.id === id);
+  if (!node) return;
+
+  const shape = group.querySelector('ellipse, rect');
+  const text = group.querySelector('text');
+
+  // Drag Start
+  group.addEventListener('pointerdown', e => {
+    const isInputClick = e.target.tagName === 'INPUT' || e.target.closest('foreignObject');
+    if (isInputClick) return;
+    if (e.shiftKey) return;
+
+    const point = getSVGPoint(e.clientX, e.clientY);
+    dragTarget = group;
+    offset.x = point.x - node.x;
+    offset.y = point.y - node.y;
+    shape.classList.add('dragging');
+  });
+
+  // Drag-Ende auf SVG (mouseup)
+  svg.addEventListener('pointerup', (e) => {
+    if (dragTarget) {
+      const id = dragTarget.dataset.nodeId;
+      const node = allNodes.find(n => n.id === id);
+      if (!node) return;
+
+      const shape = node.group.querySelector('ellipse, rect');
+      if (!shape) return;
+
+      shape.classList.remove('dragging');
+
+
+    }
+    dragTarget = null;
+  });
+
+
+  svg.addEventListener('pointercancel', e => {
+    if (dragTarget) {
+      const id = dragTarget.dataset.nodeId;
+      const node = allNodes.find(n => n.id === id);
+      if (!node) return;
+
+      const shape = node.group.querySelector('ellipse, rect');
+      if (!shape) return;
+
+      shape.classList.remove('dragging');
+
+    }
+    dragTarget = null;
+  });
+
+  // Click-Verbindung
+  group.addEventListener('click', e => {
+    e.stopPropagation();
+    if (selectedConnection) {
+      selectedConnection.classList.remove('highlighted');
+      selectedConnection = null;
+    }
+    if (selectedNode === null) {
+      selectedNode = id;
+      highlightNode(id, true);
+    } else if (selectedNode !== id) {
+      connectNodes(selectedNode, id);
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    } else {
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    }
+  });
+
+  // Doppelklick zum Umbenennen
+  text?.addEventListener('dblclick', e => {
+    e.stopPropagation();
+    if (group.querySelector('foreignObject')) return;
+
+    const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+    fo.setAttribute("x", -r);
+    fo.setAttribute("y", -10);
+    fo.setAttribute("width", r * 2);
+    fo.setAttribute("height", 20);
+
+    const input = document.createElement("input");
+    input.setAttribute("type", "text");
+    input.setAttribute("value", text.textContent);
+    fo.appendChild(input);
+    fo.style.pointerEvents = 'all';
+    group.appendChild(fo);
+
+    input.focus();
+
+    const save = () => {
+      const value = input.value.trim();
+      if (value) {
+        text.textContent = value;
+        const current = yNodes.get(id);
+        if (current) {
+          yNodes.set(id, { ...current, label: value }); // <- label speichern!
+        }
+      }
+      if (group.contains(fo)) {
+        group.removeChild(fo);
+      }
+
+    };
+
+    input.addEventListener("blur", save);
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === "Escape") {
+        group.removeChild(fo);
+      }
+    });
+  });
+}
+   
+function createDraggableNode(x, y, type, idOverride, fromNetwork = false) {
+  const style = nodeStyles[type];
+  if (!style) return;
+
+  //const id = 'node' + allNodes.length;
+const id = idOverride || 'node' + createUUID();
+console.log('randomUUID exists?', !!window.crypto?.randomUUID);
+
+
+
+  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  group.setAttribute("class", "draggable");
+  group.setAttribute("transform", `translate(${x}, ${y})`);
+  group.dataset.nodeId = id;
+  svg.appendChild(group);
+
+  let shape;
+
+  if (type === "1") {
+    // Oval (Ellipse)
+    shape = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    shape.setAttribute("cx", 0);
+    shape.setAttribute("cy", 0);
+    shape.setAttribute("rx", style.r);
+    shape.setAttribute("ry", style.r * 0.6);
+  } else if (type === "2") {
+    // Rechteck mit abgerundeten Ecken
+    shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    shape.setAttribute("x", -style.r);
+    shape.setAttribute("y", -style.r * 0.6);
+    shape.setAttribute("width", style.r * 2);
+    shape.setAttribute("height", style.r * 1.2);
+    shape.setAttribute("rx", 15);
+    shape.setAttribute("ry", 15);
+  } else {
+    // Rechteck mit scharfen Ecken (Ebene 3)
+    shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    shape.setAttribute("x", -style.r);
+    shape.setAttribute("y", -style.r * 0.6);
+    shape.setAttribute("width", style.r * 2);
+    shape.setAttribute("height", style.r * 1.2);
+    shape.setAttribute("rx", 0);
+    shape.setAttribute("ry", 0);
+  }
+
+  shape.setAttribute("fill", style.color);
+  group.appendChild(shape);
+
+
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  text.setAttribute("x", 0);
+  text.setAttribute("y", 0);
+  text.setAttribute("fill", "black");
+  text.setAttribute("font-size", style.fontSize);
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("alignment-baseline", "middle");
+  text.textContent = "...";
+  group.appendChild(text);
+
+
+
+  allNodes.push({ id, group, x, y, r: style.r });
+
+  addEventListenersToNode(group, id, style.r);
+
+  if (!fromNetwork) {
+    yNodes.set(id, { x, y, type, label: "...", id });
+  }
+
+}
+
+async function initializeAccessControl(shadowRoot) {
+  const mindmapId = new URLSearchParams(window.location.search).get('id');
+  if (!mindmapId) return;
+
+  createNicknameModal(shadowRoot); // Modal vorbereiten
+
+  let ip = 'unknown';
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+  } catch (err) {
+    console.warn("IP konnte nicht ermittelt werden:", err);
+    showNicknameModal(shadowRoot);
+    return;
+  }
+
+  startIpLockWatcher(ip, mindmapId, shadowRoot);
+
+  const storedNickname = localStorage.getItem("mindmap_nickname");
+
+  if (storedNickname) {
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('nickname', storedNickname)
+        .eq('ipadress', ip)
+        .maybeSingle();
+
+      if (!error && user && !user.locked && user.mindmap_id === mindmapId) {
+        userNickname = storedNickname;
+        console.log("Automatisch eingeloggt:", userNickname);
+        shadowRoot.getElementById('nicknameModal')?.remove();
+        return;
+      }
+    } catch (e) {
+      console.error("Fehler bei Login mit gespeicherten Nickname:", e);
+    }
+  }
+
+  // Fallback: Suche Benutzer mit passender IP und Mindmap
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('ipadress', ip)
+      .eq('mindmap_id', mindmapId)
+      .maybeSingle();
+
+    if (!error && user && !user.locked) {
+      userNickname = user.nickname;
+      localStorage.setItem("mindmap_nickname", userNickname);
+      console.log("Automatisch über IP eingeloggt:", userNickname);
+      shadowRoot.getElementById('nicknameModal')?.remove();
+      return;
+    }
+
+  } catch (err) {
+    console.error("Fehler bei Login über IP:", err);
+  }
+
+  showNicknameModal(shadowRoot);
+}
+
+function showNicknameModal(shadowRoot) {
+  let modal = shadowRoot.getElementById('nicknameModal');
+
+  if (!modal) {
+    createNicknameModal(shadowRoot);
+    modal = shadowRoot.getElementById('nicknameModal');
+  }
+
+  if (modal) {
+    modal.style.display = 'flex';
+  } else {
+    console.error("⚠️ Konnte Modal nicht anzeigen – fehlt.");
+  }
+
+  sessionStorage.removeItem("mindmap_nickname");
+  localStorage.removeItem("mindmap_nickname");
+}
+
+function startIpLockWatcher(ip, mindmapId, shadowRoot) {
+  async function checkLock() {
+    try {
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('nickname, locked, locked_until')
+        .eq('ipadress', ip)
+        .eq('mindmap_id', mindmapId);
+
+      if (error) {
+        console.error("Fehler bei Lock-Check:", error.message);
+      } else {
+        const now = new Date();
+
+        for (const user of users) {
+          if (user.locked) {
+            const until = user.locked_until ? new Date(user.locked_until) : null;
+            if (until && now >= until) {
+              await supabase
+                .from('users')
+                .update({ locked: false, locked_until: null })
+                .eq('nickname', user.nickname)
+                .eq('mindmap_id', mindmapId);
+
+              console.log(`🔓 Nutzer ${user.nickname} automatisch entsperrt.`);
+            } else {
+              console.warn(`🚫 Nutzer ${user.nickname} ist noch gesperrt.`);
+              showNicknameModal(shadowRoot);
+              return;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Fehler bei Lock-Überprüfung:", err);
+    }
+
+    setTimeout(checkLock, 5000); // regelmäßig prüfen
+  }
+
+  checkLock();
+}
+
+
 export function setupMindmap(shadowRoot) {
   svg = shadowRoot.getElementById('mindmap');
   if (!svg) {
@@ -23,6 +343,9 @@ export function setupMindmap(shadowRoot) {
 
   svg.style.touchAction = 'none';
 
+  
+
+  
   const saveBtn = shadowRoot.getElementById('saveButton');
   if (saveBtn) {
     saveBtn.addEventListener('click', saveCurrentMindmap);
@@ -49,6 +372,15 @@ export function setupMindmap(shadowRoot) {
       dragLine.setAttribute("y2", svgPoint.y);
     }
   });
+
+  dragLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+svg.appendChild(dragLine);
+
+if (dragLine) {
+  svg.removeChild(dragLine);
+  dragLine = null;
+}
+
 
   svg.addEventListener('click', () => {
     if (selectedNode) {
@@ -421,6 +753,59 @@ function updateViewBox() {
   svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
 }
 
+  
+
+function createNicknameModal() {
+  if (document.getElementById('nicknameModal')) return; 
+
+  const modal = document.createElement('div');
+  modal.id = 'nicknameModal';
+
+  modal.innerHTML = `
+  <div class="modal-content">
+    <h2>Nickname wählen</h2>
+    <input id="nicknameInput" type="text" placeholder="Dein Nickname" />
+    <button id="nicknameSubmitButton">Speichern</button>
+  </div>
+`;
+
+  document.body.appendChild(modal);
+
+  document.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
+
+
+document.getElementById('nicknameInput').addEventListener('keydown', function (event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    submitNickname();
+  }
+});
+
+}
+    
+function deleteConnection(fromId, toId) {
+  const current = yConnections.toArray();
+  const updated = current.filter(conn => !(conn.fromId === fromId && conn.toId === toId));
+  yConnections.delete(0, yConnections.length);
+  yConnections.push(updated);
+}
+
+
+
+function highlightNode(id, on) {
+  const node = allNodes.find(n => n.id === id);
+  if (!node) return;
+
+  const shape = node.group.querySelector('ellipse, rect');
+  if (!shape) return;
+
+  if (on) shape.classList.add('highlighted');
+  else shape.classList.remove('highlighted');
+}
+
+    initializeAccessControl(shadowRoot);
+
+
   console.log("✅ Mindmap im Shadow DOM vollständig initialisiert");
 }
 
@@ -455,98 +840,6 @@ function createUUID() {
 
 
 
-// Gemeinsame Datenstrukturen
-const yNodes = ydoc.getMap('nodes');        // id => {x, y, type, label}
-const yConnections = ydoc.getArray('connections'); // [{fromId, toId}]
-
-yNodes.observe(event => {
-  event.changes.keys.forEach((change, key) => {
-    if (change.action === 'add' || change.action === 'update') {
-      const { x, y, type, label } = yNodes.get(key);
-      if (!allNodes.find(n => n.id === key)) {
-        createDraggableNode(x, y, type, key, true);
-      } else {
-        const node = allNodes.find(n => n.id === key);
-        node.x = x;
-        node.y = y;
-        node.group.setAttribute("transform", `translate(${x}, ${y})`);
-        updateConnections(key);
-
-
-        const text = node.group.querySelector('text');
-        if (text && typeof label === "string" && text.textContent !== label) {
-          text.textContent = label;
-        }
-
-
-      }
-    } else if (change.action === 'delete') {
-      const node = allNodes.find(n => n.id === key);
-      if (node) {
-        svg.removeChild(node.group);
-        allNodes = allNodes.filter(n => n.id !== key);
-        // Auch Verbindungen entfernen
-        allConnections = allConnections.filter(conn => {
-          if (conn.fromId === key || conn.toId === key) {
-            svg.removeChild(conn.line);
-            return false;
-          }
-          return true;
-        });
-      }
-    }
-  });
-});
-
-
-let priorConnections = yConnections.toArray(); // initialer Zustand merken
-
-yConnections.observe(event => {
-  const current = yConnections.toArray();
-
-  console.log('YJS aktuelle Verbindungen:', yConnections.toArray());
-
-  // 🔍 Was wurde NEU hinzugefügt?
-  const added = current.filter(
-    newConn => !priorConnections.some(
-      oldConn => oldConn.fromId === newConn.fromId && oldConn.toId === newConn.toId
-    )
-  );
-
-  // 🔍 Was wurde GELÖSCHT?
-  const removed = priorConnections.filter(
-    oldConn => !current.some(
-      newConn => newConn.fromId === oldConn.fromId && newConn.toId === oldConn.toId
-    )
-  );
-
-  added.forEach(({ fromId, toId }) => {
-    console.log("➕ Neue Verbindung erkannt:", fromId, "→", toId);
-    const exists = allConnections.some(c => c.fromId === fromId && c.toId === toId);
-    if (!exists) {
-      connectNodes(fromId, toId, true);
-    }
-  });
-
-  removed.forEach(({ fromId, toId }) => {
-    console.log("🧽 Entferne Verbindung (verglichen):", fromId, "→", toId);
-    const conn = allConnections.find(c => c.fromId === fromId && c.toId === toId);
-    if (conn) {
-      svg.removeChild(conn.line);
-      allConnections = allConnections.filter(c => c !== conn);
-    }
-  });
-
-  priorConnections = current.map(c => ({ ...c }));
-});
-
-
-function deleteConnection(fromId, toId) {
-  const current = yConnections.toArray();
-  const updated = current.filter(conn => !(conn.fromId === fromId && conn.toId === toId));
-  yConnections.delete(0, yConnections.length);
-  yConnections.push(updated);
-}
 
 
 
@@ -650,209 +943,6 @@ function getSVGPoint(x, y) {
   return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 
-function createDraggableNode(x, y, type, idOverride, fromNetwork = false) {
-  const style = nodeStyles[type];
-  if (!style) return;
-
-  //const id = 'node' + allNodes.length;
-const id = idOverride || 'node' + createUUID();
-console.log('randomUUID exists?', !!window.crypto?.randomUUID);
-
-
-
-  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  group.setAttribute("class", "draggable");
-  group.setAttribute("transform", `translate(${x}, ${y})`);
-  group.dataset.nodeId = id;
-  svg.appendChild(group);
-
-  let shape;
-
-  if (type === "1") {
-    // Oval (Ellipse)
-    shape = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-    shape.setAttribute("cx", 0);
-    shape.setAttribute("cy", 0);
-    shape.setAttribute("rx", style.r);
-    shape.setAttribute("ry", style.r * 0.6);
-  } else if (type === "2") {
-    // Rechteck mit abgerundeten Ecken
-    shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    shape.setAttribute("x", -style.r);
-    shape.setAttribute("y", -style.r * 0.6);
-    shape.setAttribute("width", style.r * 2);
-    shape.setAttribute("height", style.r * 1.2);
-    shape.setAttribute("rx", 15);
-    shape.setAttribute("ry", 15);
-  } else {
-    // Rechteck mit scharfen Ecken (Ebene 3)
-    shape = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    shape.setAttribute("x", -style.r);
-    shape.setAttribute("y", -style.r * 0.6);
-    shape.setAttribute("width", style.r * 2);
-    shape.setAttribute("height", style.r * 1.2);
-    shape.setAttribute("rx", 0);
-    shape.setAttribute("ry", 0);
-  }
-
-  shape.setAttribute("fill", style.color);
-  group.appendChild(shape);
-
-
-  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  text.setAttribute("x", 0);
-  text.setAttribute("y", 0);
-  text.setAttribute("fill", "black");
-  text.setAttribute("font-size", style.fontSize);
-  text.setAttribute("text-anchor", "middle");
-  text.setAttribute("alignment-baseline", "middle");
-  text.textContent = "...";
-  group.appendChild(text);
-
-
-
-  allNodes.push({ id, group, x, y, r: style.r });
-
-  addEventListenersToNode(group, id, style.r);
-
-  if (!fromNetwork) {
-    yNodes.set(id, { x, y, type, label: "...", id });
-  }
-
-}
-
-function addEventListenersToNode(group, id, r) {
-  const node = allNodes.find(n => n.id === id);
-  if (!node) return;
-
-  const shape = group.querySelector('ellipse, rect');
-  const text = group.querySelector('text');
-
-  // Drag Start
-  group.addEventListener('pointerdown', e => {
-    const isInputClick = e.target.tagName === 'INPUT' || e.target.closest('foreignObject');
-    if (isInputClick) return;
-    if (e.shiftKey) return;
-
-    const point = getSVGPoint(e.clientX, e.clientY);
-    dragTarget = group;
-    offset.x = point.x - node.x;
-    offset.y = point.y - node.y;
-    shape.classList.add('dragging');
-  });
-
-  // Drag-Ende auf SVG (mouseup)
-  svg.addEventListener('pointerup', (e) => {
-    if (dragTarget) {
-      const id = dragTarget.dataset.nodeId;
-      const node = allNodes.find(n => n.id === id);
-      if (!node) return;
-
-      const shape = node.group.querySelector('ellipse, rect');
-      if (!shape) return;
-
-      shape.classList.remove('dragging');
-
-
-    }
-    dragTarget = null;
-  });
-
-
-  svg.addEventListener('pointercancel', e => {
-    if (dragTarget) {
-      const id = dragTarget.dataset.nodeId;
-      const node = allNodes.find(n => n.id === id);
-      if (!node) return;
-
-      const shape = node.group.querySelector('ellipse, rect');
-      if (!shape) return;
-
-      shape.classList.remove('dragging');
-
-    }
-    dragTarget = null;
-  });
-
-  // Click-Verbindung
-  group.addEventListener('click', e => {
-    e.stopPropagation();
-    if (selectedConnection) {
-      selectedConnection.classList.remove('highlighted');
-      selectedConnection = null;
-    }
-    if (selectedNode === null) {
-      selectedNode = id;
-      highlightNode(id, true);
-    } else if (selectedNode !== id) {
-      connectNodes(selectedNode, id);
-      highlightNode(selectedNode, false);
-      selectedNode = null;
-    } else {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
-    }
-  });
-
-  // Doppelklick zum Umbenennen
-  text?.addEventListener('dblclick', e => {
-    e.stopPropagation();
-    if (group.querySelector('foreignObject')) return;
-
-    const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
-    fo.setAttribute("x", -r);
-    fo.setAttribute("y", -10);
-    fo.setAttribute("width", r * 2);
-    fo.setAttribute("height", 20);
-
-    const input = document.createElement("input");
-    input.setAttribute("type", "text");
-    input.setAttribute("value", text.textContent);
-    fo.appendChild(input);
-    fo.style.pointerEvents = 'all';
-    group.appendChild(fo);
-
-    input.focus();
-
-    const save = () => {
-      const value = input.value.trim();
-      if (value) {
-        text.textContent = value;
-        const current = yNodes.get(id);
-        if (current) {
-          yNodes.set(id, { ...current, label: value }); // <- label speichern!
-        }
-      }
-      if (group.contains(fo)) {
-        group.removeChild(fo);
-      }
-
-    };
-
-    input.addEventListener("blur", save);
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        input.blur();
-      } else if (e.key === "Escape") {
-        group.removeChild(fo);
-      }
-    });
-  });
-}
-
-function highlightNode(id, on) {
-  const node = allNodes.find(n => n.id === id);
-  if (!node) return;
-
-  const shape = node.group.querySelector('ellipse, rect');
-  if (!shape) return;
-
-  if (on) shape.classList.add('highlighted');
-  else shape.classList.remove('highlighted');
-}
-
-
 
 // --- ZOOM und PAN mit ViewBox ---
 
@@ -944,37 +1034,6 @@ window.exportMindmapToPDF = exportMindmapToPDF;
 
 let userNickname = null;
 let userToLock = null;
-
-
-
-
-function createNicknameModal() {
-  if (document.getElementById('nicknameModal')) return; 
-
-  const modal = document.createElement('div');
-  modal.id = 'nicknameModal';
-
-  modal.innerHTML = `
-  <div class="modal-content">
-    <h2>Nickname wählen</h2>
-    <input id="nicknameInput" type="text" placeholder="Dein Nickname" />
-    <button id="nicknameSubmitButton">Speichern</button>
-  </div>
-`;
-
-  document.body.appendChild(modal);
-
-  document.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
-
-
-document.getElementById('nicknameInput').addEventListener('keydown', function (event) {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    submitNickname();
-  }
-});
-
-}
 
 
 
@@ -1164,73 +1223,6 @@ window.addEventListener('load', async () => {
 });
 
 
-function showNicknameModal() {
-  let modal = document.getElementById('nicknameModal');
-
-  if (!modal) {
-    createNicknameModal();
-    modal = document.getElementById('nicknameModal');
-  }
-
-  if (modal) {
-    modal.style.display = 'flex';
-  } else {
-    console.error("Konnte Modal nicht anzeigen, da es nicht existiert.");
-  }
-
-  sessionStorage.removeItem("mindmap_nickname");
-  localStorage.removeItem("mindmap_nickname");
-}
-
-
-
-
-function startIpLockWatcher(ip) {
-  async function checkLock() {
-    const mindmapId = new URLSearchParams(window.location.search).get('id');
-    try {
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('nickname, locked, locked_until')
-        .eq('ipadress', ip)
-        .eq('mindmap_id', mindmapId);
-
-      if (error) {
-        console.error("Fehler bei Lock-Check:", error.message);
-      } else {
-        const now = new Date();
-
-        for (const user of users) {
-          if (user.locked) {
-            const until = user.locked_until ? new Date(user.locked_until) : null;
-            if (until && now >= until) {
-              // Sperre ist abgelaufen → entsperren
-              await supabase
-                .from('users')
-                .update({ locked: false, locked_until: null })
-                .eq('nickname', user.nickname)
-                .eq('mindmap_id', mindmapId);
-              console.log(`Nutzer ${user.nickname} automatisch entsperrt.`);
-            } else {
-              // Noch gesperrt
-              console.warn(`Nutzer ${user.nickname} ist noch gesperrt.`);
-              showNicknameModal();
-              return;
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Fehler bei Lock-Überprüfung:", err);
-    }
-
-    setTimeout(checkLock, 5000);
-  }
-
-  checkLock();
-}
-
-
 async function loadUsersForCurrentMindmap() {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
   const container = document.getElementById('userListContainer');
@@ -1310,7 +1302,91 @@ async function lockUserByNickname(nickname) {
 }
 
 
-
-
 window.loadUsersForCurrentMindmap = loadUsersForCurrentMindmap;
 
+
+
+// Gemeinsame Datenstrukturen
+const yNodes = ydoc.getMap('nodes');        // id => {x, y, type, label}
+const yConnections = ydoc.getArray('connections'); // [{fromId, toId}]
+
+yNodes.observe(event => {
+  event.changes.keys.forEach((change, key) => {
+    if (change.action === 'add' || change.action === 'update') {
+      const { x, y, type, label } = yNodes.get(key);
+      if (!allNodes.find(n => n.id === key)) {
+        createDraggableNode(x, y, type, key, true);
+      } else {
+        const node = allNodes.find(n => n.id === key);
+        node.x = x;
+        node.y = y;
+        node.group.setAttribute("transform", `translate(${x}, ${y})`);
+        updateConnections(key);
+
+
+        const text = node.group.querySelector('text');
+        if (text && typeof label === "string" && text.textContent !== label) {
+          text.textContent = label;
+        }
+
+
+      }
+    } else if (change.action === 'delete') {
+      const node = allNodes.find(n => n.id === key);
+      if (node) {
+        svg.removeChild(node.group);
+        allNodes = allNodes.filter(n => n.id !== key);
+        // Auch Verbindungen entfernen
+        allConnections = allConnections.filter(conn => {
+          if (conn.fromId === key || conn.toId === key) {
+            svg.removeChild(conn.line);
+            return false;
+          }
+          return true;
+        });
+      }
+    }
+  });
+});
+
+
+let priorConnections = yConnections.toArray(); // initialer Zustand merken
+
+yConnections.observe(event => {
+  const current = yConnections.toArray();
+
+  console.log('YJS aktuelle Verbindungen:', yConnections.toArray());
+
+  // 🔍 Was wurde NEU hinzugefügt?
+  const added = current.filter(
+    newConn => !priorConnections.some(
+      oldConn => oldConn.fromId === newConn.fromId && oldConn.toId === newConn.toId
+    )
+  );
+
+  // 🔍 Was wurde GELÖSCHT?
+  const removed = priorConnections.filter(
+    oldConn => !current.some(
+      newConn => newConn.fromId === oldConn.fromId && newConn.toId === oldConn.toId
+    )
+  );
+
+  added.forEach(({ fromId, toId }) => {
+    console.log("➕ Neue Verbindung erkannt:", fromId, "→", toId);
+    const exists = allConnections.some(c => c.fromId === fromId && c.toId === toId);
+    if (!exists) {
+      connectNodes(fromId, toId, true);
+    }
+  });
+
+  removed.forEach(({ fromId, toId }) => {
+    console.log("🧽 Entferne Verbindung (verglichen):", fromId, "→", toId);
+    const conn = allConnections.find(c => c.fromId === fromId && c.toId === toId);
+    if (conn) {
+      svg.removeChild(conn.line);
+      allConnections = allConnections.filter(c => c !== conn);
+    }
+  });
+
+  priorConnections = current.map(c => ({ ...c }));
+});
