@@ -7,132 +7,88 @@ const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
 let initialSyncDone = false;
 
-const svg = document.getElementById('mindmap');
+//const svg = document.getElementById('mindmap');
 
 
-// Falls eine ID vorhanden ist, lade die Mindmap
-if (mindmapId) {
-  loadMindmapFromDB(mindmapId);
-}
+let svg = null;
 
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
 
-/*const ydoc = new Y.Doc();
-const provider = new WebsocketProvider('ws://localhost:1234', mindmapId, ydoc);*/
-const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:1234';
-
-const ydoc = new Y.Doc();
-const provider = new WebsocketProvider(wsUrl, mindmapId, ydoc);
-
-function createUUID() {
-  if (window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
+export function setupMindmap(shadowRoot) {
+  svg = shadowRoot.getElementById('mindmap');
+  if (!svg) {
+    console.error("SVG nicht im Shadow DOM gefunden!");
+    return;
   }
-  // Fallback: einfache, sichere UUID-Alternative
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
+
+  svg.style.touchAction = 'none';
+
+  const saveBtn = shadowRoot.getElementById('saveButton');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveCurrentMindmap);
+  }
+
+  shadowRoot.querySelectorAll('.node-template').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      draggedType = e.target.getAttribute('data-type');
+    });
   });
-}
 
+  svg.addEventListener('dragover', e => e.preventDefault());
 
+  svg.addEventListener('drop', e => {
+    e.preventDefault();
+    const svgPoint = getSVGPoint(e.clientX, e.clientY);
+    createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
+  });
 
-// Gemeinsame Datenstrukturen
-const yNodes = ydoc.getMap('nodes');        // id => {x, y, type, label}
-const yConnections = ydoc.getArray('connections'); // [{fromId, toId}]
+  svg.addEventListener('pointermove', e => {
+    if (dragLine) {
+      const svgPoint = getSVGPoint(e.clientX, e.clientY);
+      dragLine.setAttribute("x2", svgPoint.x);
+      dragLine.setAttribute("y2", svgPoint.y);
+    }
+  });
 
-yNodes.observe(event => {
-  event.changes.keys.forEach((change, key) => {
-    if (change.action === 'add' || change.action === 'update') {
-      const { x, y, type, label } = yNodes.get(key);
-      if (!allNodes.find(n => n.id === key)) {
-        createDraggableNode(x, y, type, key, true);
-      } else {
-        const node = allNodes.find(n => n.id === key);
-        node.x = x;
-        node.y = y;
-        node.group.setAttribute("transform", `translate(${x}, ${y})`);
-        updateConnections(key);
+  svg.addEventListener('click', () => {
+    if (selectedNode) {
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    }
+    if (selectedConnection) {
+      selectedConnection.classList.remove('highlighted');
+      selectedConnection = null;
+    }
+  });
 
+  const confirmBtn = shadowRoot.getElementById('confirmLockBtn');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      if (userToLock) {
+        await lockUserByNickname(userToLock);
+        const messageBox = shadowRoot.getElementById('overlayMessage');
+        messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
 
-        const text = node.group.querySelector('text');
-        if (text && typeof label === "string" && text.textContent !== label) {
-          text.textContent = label;
-        }
+        shadowRoot.querySelector('.overlay-buttons').style.display = 'none';
 
-
+        setTimeout(() => {
+          shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
+          shadowRoot.querySelector('.overlay-buttons').style.display = 'flex';
+          userToLock = null;
+        }, 2000);
       }
-    } else if (change.action === 'delete') {
-      const node = allNodes.find(n => n.id === key);
-      if (node) {
-        svg.removeChild(node.group);
-        allNodes = allNodes.filter(n => n.id !== key);
-        // Auch Verbindungen entfernen
-        allConnections = allConnections.filter(conn => {
-          if (conn.fromId === key || conn.toId === key) {
-            svg.removeChild(conn.line);
-            return false;
-          }
-          return true;
-        });
-      }
-    }
-  });
-});
+    });
+  }
+
+  const cancelBtn = shadowRoot.getElementById('cancelLockBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
+      userToLock = null;
+    });
+  }
 
 
-let priorConnections = yConnections.toArray(); // initialer Zustand merken
-
-yConnections.observe(event => {
-  const current = yConnections.toArray();
-
-  console.log('YJS aktuelle Verbindungen:', yConnections.toArray());
-
-  // 🔍 Was wurde NEU hinzugefügt?
-  const added = current.filter(
-    newConn => !priorConnections.some(
-      oldConn => oldConn.fromId === newConn.fromId && oldConn.toId === newConn.toId
-    )
-  );
-
-  // 🔍 Was wurde GELÖSCHT?
-  const removed = priorConnections.filter(
-    oldConn => !current.some(
-      newConn => newConn.fromId === oldConn.fromId && newConn.toId === oldConn.toId
-    )
-  );
-
-  added.forEach(({ fromId, toId }) => {
-    console.log("➕ Neue Verbindung erkannt:", fromId, "→", toId);
-    const exists = allConnections.some(c => c.fromId === fromId && c.toId === toId);
-    if (!exists) {
-      connectNodes(fromId, toId, true);
-    }
-  });
-
-  removed.forEach(({ fromId, toId }) => {
-    console.log("🧽 Entferne Verbindung (verglichen):", fromId, "→", toId);
-    const conn = allConnections.find(c => c.fromId === fromId && c.toId === toId);
-    if (conn) {
-      svg.removeChild(conn.line);
-      allConnections = allConnections.filter(c => c !== conn);
-    }
-  });
-
-  priorConnections = current.map(c => ({ ...c }));
-});
-
-
-function deleteConnection(fromId, toId) {
-  const current = yConnections.toArray();
-  const updated = current.filter(conn => !(conn.fromId === fromId && conn.toId === toId));
-  yConnections.delete(0, yConnections.length);
-  yConnections.push(updated);
-}
-
-
+  
 async function loadMindmapFromDB(id) {
   const { data, error } = await supabase
     .from('creations')
@@ -273,6 +229,326 @@ async function loadMindmapFromDB(id) {
 
 }
 
+// Drag-Bewegung
+svg.addEventListener('pointermove', e => {
+  if (!dragTarget) return;
+  const point = getSVGPoint(e.clientX, e.clientY);
+  const id = dragTarget.dataset.nodeId;
+  const node = allNodes.find(n => n.id === id);
+  if (!node) return;
+
+  const newX = point.x - offset.x;
+  const newY = point.y - offset.y;
+  dragTarget.setAttribute("transform", `translate(${newX}, ${newY})`);
+  node.x = newX;
+  node.y = newY;
+
+  yNodes.set(id, { ...yNodes.get(id), x: newX, y: newY });
+
+  console.log(" node-moving gesendet", node.id, node.x, node.y);
+  updateConnections(id);
+});
+
+
+
+// Deselect auf SVG-Klick
+svg.addEventListener('click', () => {
+  if (selectedNode !== null) {
+    highlightNode(selectedNode, false);
+    selectedNode = null;
+  }
+  if (selectedConnection) {
+    selectedConnection.classList.remove('highlighted');
+    selectedConnection = null;
+  }
+});
+
+function updateConnections(movedId) {
+  allConnections.forEach(conn => {
+    if (conn.fromId === movedId || conn.toId === movedId) {
+      const from = allNodes.find(n => n.id === conn.fromId);
+      const to = allNodes.find(n => n.id === conn.toId);
+      conn.line.setAttribute("x1", from.x);
+      conn.line.setAttribute("y1", from.y);
+      conn.line.setAttribute("x2", to.x);
+      conn.line.setAttribute("y2", to.y);
+    }
+  });
+}
+
+function connectNodes(fromId, toId, fromNetwork = false) {
+  const from = allNodes.find(n => n.id === fromId);
+  const to = allNodes.find(n => n.id === toId);
+  if (!from || !to) return;
+
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.setAttribute("x1", from.x);
+  line.setAttribute("y1", from.y);
+  line.setAttribute("x2", to.x);
+  line.setAttribute("y2", to.y);
+  line.dataset.from = fromId;
+  line.dataset.to = toId;
+
+  line.setAttribute("stroke", "#888");
+  line.setAttribute("stroke-width", "3");
+  line.setAttribute("class", "connection-line");
+
+  svg.appendChild(line);
+
+  line.addEventListener("click", e => {
+    e.stopPropagation();
+
+    if (selectedNode !== null) {
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    }
+    if (selectedConnection) {
+      selectedConnection.classList.remove("highlighted");
+    }
+
+    selectedConnection = line;
+    selectedConnection.classList.add("highlighted");
+  });
+
+  line.addEventListener("contextmenu", e => {
+    e.preventDefault();
+
+    const fromId = line.dataset.from;
+    const toId = line.dataset.to;
+
+    deleteConnection(fromId, toId);
+
+
+
+    if (selectedConnection === line) selectedConnection = null;
+  });
+
+
+  svg.insertBefore(line, svg.firstChild);
+  allConnections.push({ fromId, toId, line });
+
+  if (!fromNetwork) {
+    yConnections.push([{ fromId, toId }]);
+  }
+
+}
+
+// Delete-Taste zum Entfernen von Knoten oder Verbindung
+document.addEventListener('keydown', (e) => {
+  const activeElement = document.activeElement;
+  if (activeElement && (
+    activeElement.tagName === "INPUT" ||
+    activeElement.tagName === "TEXTAREA" ||
+    activeElement.isContentEditable
+  )) {
+    return;
+  }
+
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+
+    if (selectedConnection) {
+      const fromId = selectedConnection.dataset.from;
+      const toId = selectedConnection.dataset.to;
+
+      deleteConnection(fromId, toId);
+
+      selectedConnection = null;
+      return;
+    }
+
+
+
+    if (selectedNode) {
+      const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
+      if (nodeIndex === -1) return;
+
+      const node = allNodes[nodeIndex];
+      svg.removeChild(node.group);
+      allNodes.splice(nodeIndex, 1);
+
+      yNodes.delete(selectedNode);
+
+
+      // Verbindungen mit dem Knoten entfernen
+      allConnections = allConnections.filter(conn => {
+        if (conn.fromId === selectedNode || conn.toId === selectedNode) {
+          svg.removeChild(conn.line);
+          return false;
+        }
+        return true;
+      });
+
+      selectedNode = null;
+    }
+  }
+});
+
+
+svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+
+let zoom = 1;
+const zoomStep = 0.025;
+const minZoom = 0.1;
+const maxZoom = 3;
+
+// Zoom mit Mausrad
+svg.addEventListener("wheel", (e) => {
+  e.preventDefault();
+
+  // Zoomrichtung
+  zoom += e.deltaY > 0 ? -zoomStep : zoomStep;
+  zoom = Math.min(Math.max(zoom, minZoom), maxZoom);
+
+  // Zoom um Mausposition (optional)
+  const mouseSVG = getSVGPoint(e.clientX, e.clientY);
+
+  // Neue ViewBox-Größe basierend auf Zoom
+  const newWidth = initialViewBoxSize / zoom;
+  const newHeight = initialViewBoxSize / zoom;
+
+  // ViewBox so verschieben, dass Zoom um Mausposition bleibt
+  viewBox.x = mouseSVG.x - (mouseSVG.x - viewBox.x) * (newWidth / viewBox.w);
+  viewBox.y = mouseSVG.y - (mouseSVG.y - viewBox.y) * (newHeight / viewBox.h);
+  viewBox.w = newWidth;
+  viewBox.h = newHeight;
+
+  updateViewBox();
+});
+
+function updateViewBox() {
+  svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+}
+
+  console.log("✅ Mindmap im Shadow DOM vollständig initialisiert");
+}
+
+
+
+// Falls eine ID vorhanden ist, lade die Mindmap
+if (mindmapId) {
+  loadMindmapFromDB(mindmapId);
+}
+
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+
+/*const ydoc = new Y.Doc();
+const provider = new WebsocketProvider('ws://localhost:1234', mindmapId, ydoc);*/
+const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:1234';
+
+const ydoc = new Y.Doc();
+const provider = new WebsocketProvider(wsUrl, mindmapId, ydoc);
+
+function createUUID() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  // Fallback: einfache, sichere UUID-Alternative
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+
+
+// Gemeinsame Datenstrukturen
+const yNodes = ydoc.getMap('nodes');        // id => {x, y, type, label}
+const yConnections = ydoc.getArray('connections'); // [{fromId, toId}]
+
+yNodes.observe(event => {
+  event.changes.keys.forEach((change, key) => {
+    if (change.action === 'add' || change.action === 'update') {
+      const { x, y, type, label } = yNodes.get(key);
+      if (!allNodes.find(n => n.id === key)) {
+        createDraggableNode(x, y, type, key, true);
+      } else {
+        const node = allNodes.find(n => n.id === key);
+        node.x = x;
+        node.y = y;
+        node.group.setAttribute("transform", `translate(${x}, ${y})`);
+        updateConnections(key);
+
+
+        const text = node.group.querySelector('text');
+        if (text && typeof label === "string" && text.textContent !== label) {
+          text.textContent = label;
+        }
+
+
+      }
+    } else if (change.action === 'delete') {
+      const node = allNodes.find(n => n.id === key);
+      if (node) {
+        svg.removeChild(node.group);
+        allNodes = allNodes.filter(n => n.id !== key);
+        // Auch Verbindungen entfernen
+        allConnections = allConnections.filter(conn => {
+          if (conn.fromId === key || conn.toId === key) {
+            svg.removeChild(conn.line);
+            return false;
+          }
+          return true;
+        });
+      }
+    }
+  });
+});
+
+
+let priorConnections = yConnections.toArray(); // initialer Zustand merken
+
+yConnections.observe(event => {
+  const current = yConnections.toArray();
+
+  console.log('YJS aktuelle Verbindungen:', yConnections.toArray());
+
+  // 🔍 Was wurde NEU hinzugefügt?
+  const added = current.filter(
+    newConn => !priorConnections.some(
+      oldConn => oldConn.fromId === newConn.fromId && oldConn.toId === newConn.toId
+    )
+  );
+
+  // 🔍 Was wurde GELÖSCHT?
+  const removed = priorConnections.filter(
+    oldConn => !current.some(
+      newConn => newConn.fromId === oldConn.fromId && newConn.toId === oldConn.toId
+    )
+  );
+
+  added.forEach(({ fromId, toId }) => {
+    console.log("➕ Neue Verbindung erkannt:", fromId, "→", toId);
+    const exists = allConnections.some(c => c.fromId === fromId && c.toId === toId);
+    if (!exists) {
+      connectNodes(fromId, toId, true);
+    }
+  });
+
+  removed.forEach(({ fromId, toId }) => {
+    console.log("🧽 Entferne Verbindung (verglichen):", fromId, "→", toId);
+    const conn = allConnections.find(c => c.fromId === fromId && c.toId === toId);
+    if (conn) {
+      svg.removeChild(conn.line);
+      allConnections = allConnections.filter(c => c !== conn);
+    }
+  });
+
+  priorConnections = current.map(c => ({ ...c }));
+});
+
+
+function deleteConnection(fromId, toId) {
+  const current = yConnections.toArray();
+  const updated = current.filter(conn => !(conn.fromId === fromId && conn.toId === toId));
+  yConnections.delete(0, yConnections.length);
+  yConnections.push(updated);
+}
+
+
+
 import { getCreations, saveCreation } from '../../supabase/database.js';  // Pfad anpassen
 /*
 window.onload = async () => {
@@ -337,8 +613,6 @@ export async function saveCurrentMindmap() {
   }
 }
 
-document.getElementById('saveButton').addEventListener('click', saveCurrentMindmap);
-
 
 let draggedType = null;
 let dragTarget = null;
@@ -349,7 +623,6 @@ let allConnections = [];
 let selectedNode = null;
 let selectedConnection = null; // neu
 
-svg.style.touchAction = 'none';
 
 const getCSSColor = (level) =>
   getComputedStyle(document.documentElement).getPropertyValue(`--color-level-${level}`).trim();
@@ -367,13 +640,6 @@ document.querySelectorAll('.node-template').forEach(el => {
   });
 });
 
-svg.addEventListener('dragover', e => e.preventDefault());
-
-svg.addEventListener('drop', e => {
-  e.preventDefault();
-  const svgPoint = getSVGPoint(e.clientX, e.clientY);
-  createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
-});
 
 // Browser-Koordinaten -> SVG-Koordinaten
 function getSVGPoint(x, y) {
@@ -585,160 +851,7 @@ function highlightNode(id, on) {
   else shape.classList.remove('highlighted');
 }
 
-// Drag-Bewegung
-svg.addEventListener('pointermove', e => {
-  if (!dragTarget) return;
-  const point = getSVGPoint(e.clientX, e.clientY);
-  const id = dragTarget.dataset.nodeId;
-  const node = allNodes.find(n => n.id === id);
-  if (!node) return;
 
-  const newX = point.x - offset.x;
-  const newY = point.y - offset.y;
-  dragTarget.setAttribute("transform", `translate(${newX}, ${newY})`);
-  node.x = newX;
-  node.y = newY;
-
-  yNodes.set(id, { ...yNodes.get(id), x: newX, y: newY });
-
-  console.log(" node-moving gesendet", node.id, node.x, node.y);
-  updateConnections(id);
-});
-
-
-
-// Deselect auf SVG-Klick
-svg.addEventListener('click', () => {
-  if (selectedNode !== null) {
-    highlightNode(selectedNode, false);
-    selectedNode = null;
-  }
-  if (selectedConnection) {
-    selectedConnection.classList.remove('highlighted');
-    selectedConnection = null;
-  }
-});
-
-function updateConnections(movedId) {
-  allConnections.forEach(conn => {
-    if (conn.fromId === movedId || conn.toId === movedId) {
-      const from = allNodes.find(n => n.id === conn.fromId);
-      const to = allNodes.find(n => n.id === conn.toId);
-      conn.line.setAttribute("x1", from.x);
-      conn.line.setAttribute("y1", from.y);
-      conn.line.setAttribute("x2", to.x);
-      conn.line.setAttribute("y2", to.y);
-    }
-  });
-}
-
-function connectNodes(fromId, toId, fromNetwork = false) {
-  const from = allNodes.find(n => n.id === fromId);
-  const to = allNodes.find(n => n.id === toId);
-  if (!from || !to) return;
-
-  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  line.setAttribute("x1", from.x);
-  line.setAttribute("y1", from.y);
-  line.setAttribute("x2", to.x);
-  line.setAttribute("y2", to.y);
-  line.dataset.from = fromId;
-  line.dataset.to = toId;
-
-  line.setAttribute("stroke", "#888");
-  line.setAttribute("stroke-width", "3");
-  line.setAttribute("class", "connection-line");
-
-  svg.appendChild(line);
-
-  line.addEventListener("click", e => {
-    e.stopPropagation();
-
-    if (selectedNode !== null) {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
-    }
-    if (selectedConnection) {
-      selectedConnection.classList.remove("highlighted");
-    }
-
-    selectedConnection = line;
-    selectedConnection.classList.add("highlighted");
-  });
-
-  line.addEventListener("contextmenu", e => {
-    e.preventDefault();
-
-    const fromId = line.dataset.from;
-    const toId = line.dataset.to;
-
-    deleteConnection(fromId, toId);
-
-
-
-    if (selectedConnection === line) selectedConnection = null;
-  });
-
-
-  svg.insertBefore(line, svg.firstChild);
-  allConnections.push({ fromId, toId, line });
-
-  if (!fromNetwork) {
-    yConnections.push([{ fromId, toId }]);
-  }
-
-}
-
-// Delete-Taste zum Entfernen von Knoten oder Verbindung
-document.addEventListener('keydown', (e) => {
-  const activeElement = document.activeElement;
-  if (activeElement && (
-    activeElement.tagName === "INPUT" ||
-    activeElement.tagName === "TEXTAREA" ||
-    activeElement.isContentEditable
-  )) {
-    return;
-  }
-
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    e.preventDefault();
-
-    if (selectedConnection) {
-      const fromId = selectedConnection.dataset.from;
-      const toId = selectedConnection.dataset.to;
-
-      deleteConnection(fromId, toId);
-
-      selectedConnection = null;
-      return;
-    }
-
-
-
-    if (selectedNode) {
-      const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
-      if (nodeIndex === -1) return;
-
-      const node = allNodes[nodeIndex];
-      svg.removeChild(node.group);
-      allNodes.splice(nodeIndex, 1);
-
-      yNodes.delete(selectedNode);
-
-
-      // Verbindungen mit dem Knoten entfernen
-      allConnections = allConnections.filter(conn => {
-        if (conn.fromId === selectedNode || conn.toId === selectedNode) {
-          svg.removeChild(conn.line);
-          return false;
-        }
-        return true;
-      });
-
-      selectedNode = null;
-    }
-  }
-});
 
 // --- ZOOM und PAN mit ViewBox ---
 
@@ -753,40 +866,6 @@ let viewBox = {
   h: initialViewBoxSize,
 };
 
-svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-
-let zoom = 1;
-const zoomStep = 0.025;
-const minZoom = 0.1;
-const maxZoom = 3;
-
-// Zoom mit Mausrad
-svg.addEventListener("wheel", (e) => {
-  e.preventDefault();
-
-  // Zoomrichtung
-  zoom += e.deltaY > 0 ? -zoomStep : zoomStep;
-  zoom = Math.min(Math.max(zoom, minZoom), maxZoom);
-
-  // Zoom um Mausposition (optional)
-  const mouseSVG = getSVGPoint(e.clientX, e.clientY);
-
-  // Neue ViewBox-Größe basierend auf Zoom
-  const newWidth = initialViewBoxSize / zoom;
-  const newHeight = initialViewBoxSize / zoom;
-
-  // ViewBox so verschieben, dass Zoom um Mausposition bleibt
-  viewBox.x = mouseSVG.x - (mouseSVG.x - viewBox.x) * (newWidth / viewBox.w);
-  viewBox.y = mouseSVG.y - (mouseSVG.y - viewBox.y) * (newHeight / viewBox.h);
-  viewBox.w = newWidth;
-  viewBox.h = newHeight;
-
-  updateViewBox();
-});
-
-function updateViewBox() {
-  svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-}
 
 // Pan mit WASD/Pfeiltasten (verschiebt ViewBox um festen Schritt)
 const panStep = 20;
@@ -1229,35 +1308,8 @@ async function lockUserByNickname(nickname) {
   console.log(`User "${nickname}" wurde bis ${lockUntil} gesperrt.`);
 }
 
-document.getElementById('confirmLockBtn').addEventListener('click', async () => {
-  if (userToLock) {
-    await lockUserByNickname(userToLock);
 
-    // show confirmation in overlay
-    const messageBox = document.getElementById('overlayMessage');
-    messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
-
-    // don´t show buttons
-    document.querySelector('.overlay-buttons').style.display = 'none';
-
-    // close overlay after two seconds
-    setTimeout(() => {
-      document.getElementById('ipLockOverlay').style.display = 'none';
-      document.querySelector('.overlay-buttons').style.display = 'flex';
-      userToLock = null;
-    }, 2000);
-  }
-});
-
-
-document.getElementById('cancelLockBtn').addEventListener('click', () => {
-  userToLock = null;
-  document.getElementById('ipLockOverlay').style.display = 'none';
-});
 
 
 window.loadUsersForCurrentMindmap = loadUsersForCurrentMindmap;
-
-
-
 

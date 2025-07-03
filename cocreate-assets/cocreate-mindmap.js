@@ -1,4 +1,4 @@
-
+import { setupMindmap } from './scripts/script-core.js';
 export class CoCreateMindmap extends HTMLElement {
   constructor() {
     super();
@@ -68,7 +68,9 @@ export class CoCreateMindmap extends HTMLElement {
       </div>
     `;
 
-    this.shadowRoot.appendChild(container);  
+    this.shadowRoot.appendChild(container); 
+    setupMindmap(this.shadowRoot);
+     
   }
 }
 
