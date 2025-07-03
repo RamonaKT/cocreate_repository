@@ -1,3 +1,30 @@
+:host {
+    --color-level-1: #797ec6;
+    --color-level-2: #a4a9ea;
+    --color-level-3: #ced2ff;
+}
+
+#sidebar-left {
+    margin-right: 10px;
+    max-width: 75px;
+    background-color: transparent;
+    position: absolute;
+    left: 1vw;
+    top: 10vh;
+    width: 25vh;
+    padding: 10px;
+    text-align: left;
+    overflow-y: auto;
+    font-size: 14px;
+    font-family: sans-serif;
+}
+
+.sidebar img {
+    height: 75px;
+    width: 75px;
+    border-radius: 15%;
+}
+
 /*Die Toolbar mit den Items zum ziehen*/
 #toolbar {
     position: fixed;
@@ -106,49 +133,6 @@ foreignObject input {
     border-radius: 20px;
 }
 
-/*Sidebars allgemein und Cache aber nicht Navigationbereich -> siehe navigation.css*/
-
-#sidebar-right, #sidebar-left {
-    width: 25vh;
-    padding: 10px;
-    text-align: left;
-    overflow-y: auto;
-    font-size: 14px;
-    font-family: sans-serif;
-    /*margin-bottom: 2vh;*/
-    
-}
-
-#sidebar-right {
-    margin-left: 10px;
-    height: 67.7vh;
-    background: #f8f8f8;
-    border: 1px solid #ccc;
-    margin-top: 3vh;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-}
-
-#sidebar-left {
-    margin-right: 10px;
-    max-width: 75px;
-    background-color: transparent;
-    position: absolute;
-    left: 1vw;
-    top: 10vh;
-}
-
-.sidebar img {
-    height: 75px;
-    width: 75px;
-    border-radius: 15%;
-}
-
-
-:root {
-    --color-level-1: #797ec6;
-    --color-level-2: #a4a9ea;
-    --color-level-3: #ced2ff;
-}
 
 #iplockOverlay {
     display: none;

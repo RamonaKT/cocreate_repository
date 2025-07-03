@@ -1,5 +1,6 @@
 import { supabase } from './supabase/client.js';
 
+
 const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
 let initialSyncDone = false;
