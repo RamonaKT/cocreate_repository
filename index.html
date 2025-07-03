@@ -22,67 +22,15 @@
   <div class="node-template" draggable="true" data-type="3" >Ebene 3</div>
 </div>
 
-
-<div id="mindmap-container">
-
-  <div id="sidebar-left" class="sidebar">
+<cocreate-mindmap></cocreate-mindmap>
 
 
-    <!-- Kurzanleitung -->
-      <img src="./img/icon-manuell.png" alt="Icon manuell"
-       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconManuell').showModal()">
+<script type="module" src="./cocreate-assets/cocreate-mindmap.js"></script> 
 
-    <dialog id="dialogIconManuell">
-      <h2>Quick-Start manuell</h2>
-      <p>save to open new mindmap. everyone needs access to server. share id. have fun.</p>
-      <button class="close" draggable="false" onclick="document.getElementById('dialogIconManuell').close()">Schließen</button>
-    </dialog>
-
-      <img src="./img/icon-overview.png" alt="Icon overview user"
-       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconOverviewUser').showModal()">
-
-    <dialog id="dialogIconOverviewUser">
-      <h2>User-Overview</h2>
-      <div id="userListContainer"></div> <!-- ⬅ Hier werden die Nicknames eingefügt -->
-      <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
-
-    </dialog>
-
-    <img src="./img/icon-download.png" alt="Icon Download pdf" class="pdfButton"
-       style="cursor: pointer;" draggable="false" onclick="exportMindmapToPDF()">
-
-    <img src="./img/icon-save.png" alt="Icon save" id="saveButton"
-       style="cursor: pointer;" draggable="false">
-
-  </div>
-  
-  
-<div id="ipLockOverlay" >
-  <div class="overlay-box">
-    <p id="overlayMessage">Möchtest du diese IP wirklich sperren?</p>
-    <div class="overlay-buttons">
-      <button id="confirmLockBtn">Ja, sperren</button>
-      <button id="cancelLockBtn">Abbrechen</button>
-    </div>
-  </div>
-</div>
-
-  <svg id="mindmap" width="1000" height="600"></svg>
-  
-  
-
-</div>
-
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
-
-
-<script type="module" src="./script.js"></script>
+<script type="module" src="./cocreate-assets/scripts/functions.js"></script>
+<script type="module" src="./cocreate-assets/scripts/workspace.js></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@1.4.0/dist/svg2pdf.min.js"></script>
+
 </body>
 </html>
