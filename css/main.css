@@ -71,7 +71,9 @@ button.close {
      background-color: #218838;
 }
 
-
+#iplockOverlay {
+    display: none;
+}
 
 .badge.admin {
   background-color: gold;
