@@ -1,7 +1,5 @@
 import { supabase } from './supabase/client.js';
 
-
-
 const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
 let initialSyncDone = false;
@@ -324,7 +322,7 @@ async function saveCurrentMindmap() {
     const id = result[0]?.creationid;
     if (id) {
       alert("Erfolgreich gespeichert! Du wirst weitergeleitet...");
-      const link = `${location.origin}/index.html?id=${id}`;
+      const link = `${location.origin}/?id=${id}`;
       window.location.href = link;
       console.log(link);
     } else {
