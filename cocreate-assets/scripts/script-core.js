@@ -424,11 +424,6 @@ function startIpLockWatcher(ip, mindmapId, shadowRoot) {
 
 
 
-// Falls eine ID vorhanden ist, lade die Mindmap
-if (mindmapId) {
-  loadMindmapFromDB(mindmapId);
-}
-
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 
@@ -457,33 +452,7 @@ function createUUID() {
 
 
 import { getCreations, saveCreation } from '../../supabase/database.js';  // Pfad anpassen
-/*
-window.onload = async () => {
-  try {
-    const creations = await getCreations();
-    console.log('Verbindung zu Supabase erfolgreich. Gefundene Daten:', creations);
-  } catch (error) {
-    console.error('Fehler bei der Verbindung zu Supabase:', error);
-  }
-};*/
 
-window.onload = async () => {
-  try {
-    const creations = await getCreations();
-    console.log('Verbindung zu Supabase erfolgreich. Gefundene Daten:', creations);
-  } catch (error) {
-    console.error('Fehler bei der Verbindung zu Supabase:', error);
-  }
-
-  const nickname = sessionStorage.getItem("mindmap_nickname");
-  //const nickname = localStorage.getItem("mindmap_nickname");
-  const params = new URLSearchParams(window.location.search);
-  const mindmapId = params.get('id');
-
-  if (mindmapId && !nickname) {
-    createNicknameModal(); // oder: document.getElementById('nicknameModal').style.display = 'block';
-  }
-};
 
 
 
@@ -1004,95 +973,6 @@ yConnections.observe(event => {
   priorConnections = current.map(c => ({ ...c }));
 });
 
-
-
-
-export function setupMindmap(shadowRoot) {
-  svg = shadowRoot.getElementById('mindmap');
-  if (!svg) {
-    console.error("SVG nicht im Shadow DOM gefunden!");
-    return;
-  }
-
-  svg.style.touchAction = 'none';
-
-  
-  const saveBtn = shadowRoot.getElementById('saveButton');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', saveCurrentMindmap);
-  }
-
-  shadowRoot.querySelectorAll('.node-template').forEach(el => {
-    el.addEventListener('dragstart', e => {
-      draggedType = e.target.getAttribute('data-type');
-    });
-  });
-
-  svg.addEventListener('dragover', e => e.preventDefault());
-
-  svg.addEventListener('drop', e => {
-    e.preventDefault();
-    const svgPoint = getSVGPoint(e.clientX, e.clientY);
-    createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
-  });
-
-  svg.addEventListener('pointermove', e => {
-    if (dragLine) {
-      const svgPoint = getSVGPoint(e.clientX, e.clientY);
-      dragLine.setAttribute("x2", svgPoint.x);
-      dragLine.setAttribute("y2", svgPoint.y);
-    }
-  });
-
-  dragLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-svg.appendChild(dragLine);
-
-if (dragLine) {
-  svg.removeChild(dragLine);
-  dragLine = null;
-}
-
-
-  svg.addEventListener('click', () => {
-    if (selectedNode) {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
-    }
-    if (selectedConnection) {
-      selectedConnection.classList.remove('highlighted');
-      selectedConnection = null;
-    }
-  });
-
-  const confirmBtn = shadowRoot.getElementById('confirmLockBtn');
-  if (confirmBtn) {
-    confirmBtn.addEventListener('click', async () => {
-      if (userToLock) {
-        await lockUserByNickname(userToLock);
-        const messageBox = shadowRoot.getElementById('overlayMessage');
-        messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
-
-        shadowRoot.querySelector('.overlay-buttons').style.display = 'none';
-
-        setTimeout(() => {
-          shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
-          shadowRoot.querySelector('.overlay-buttons').style.display = 'flex';
-          userToLock = null;
-        }, 2000);
-      }
-    });
-  }
-
-  const cancelBtn = shadowRoot.getElementById('cancelLockBtn');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', () => {
-      shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
-      userToLock = null;
-    });
-  }
-
-
-  
 async function loadMindmapFromDB(id) {
   const { data, error } = await supabase
     .from('creations')
@@ -1232,6 +1112,95 @@ async function loadMindmapFromDB(id) {
   });
 
 }
+
+
+export function setupMindmap(shadowRoot) {
+  svg = shadowRoot.getElementById('mindmap');
+  if (!svg) {
+    console.error("SVG nicht im Shadow DOM gefunden!");
+    return;
+  }
+
+  svg.style.touchAction = 'none';
+
+  
+  const saveBtn = shadowRoot.getElementById('saveButton');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveCurrentMindmap);
+  }
+
+  shadowRoot.querySelectorAll('.node-template').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      draggedType = e.target.getAttribute('data-type');
+    });
+  });
+
+  svg.addEventListener('dragover', e => e.preventDefault());
+
+  svg.addEventListener('drop', e => {
+    e.preventDefault();
+    const svgPoint = getSVGPoint(e.clientX, e.clientY);
+    createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
+  });
+
+  svg.addEventListener('pointermove', e => {
+    if (dragLine) {
+      const svgPoint = getSVGPoint(e.clientX, e.clientY);
+      dragLine.setAttribute("x2", svgPoint.x);
+      dragLine.setAttribute("y2", svgPoint.y);
+    }
+  });
+
+  dragLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+svg.appendChild(dragLine);
+
+if (dragLine) {
+  svg.removeChild(dragLine);
+  dragLine = null;
+}
+
+
+  svg.addEventListener('click', () => {
+    if (selectedNode) {
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    }
+    if (selectedConnection) {
+      selectedConnection.classList.remove('highlighted');
+      selectedConnection = null;
+    }
+  });
+
+  const confirmBtn = shadowRoot.getElementById('confirmLockBtn');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      if (userToLock) {
+        await lockUserByNickname(userToLock);
+        const messageBox = shadowRoot.getElementById('overlayMessage');
+        messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
+
+        shadowRoot.querySelector('.overlay-buttons').style.display = 'none';
+
+        setTimeout(() => {
+          shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
+          shadowRoot.querySelector('.overlay-buttons').style.display = 'flex';
+          userToLock = null;
+        }, 2000);
+      }
+    });
+  }
+
+  const cancelBtn = shadowRoot.getElementById('cancelLockBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
+      userToLock = null;
+    });
+  }
+
+
+  
+
 
 // Drag-Bewegung
 svg.addEventListener('pointermove', e => {
@@ -1388,7 +1357,42 @@ document.getElementById('nicknameInput').addEventListener('keydown', function (e
 
     initializeAccessControl(shadowRoot);
 
+    
+
+// Falls eine ID vorhanden ist, lade die Mindmap
+if (mindmapId) {
+  loadMindmapFromDB(mindmapId);
+}
 
   console.log("✅ Mindmap im Shadow DOM vollständig initialisiert");
 }
 
+
+
+/*
+window.onload = async () => {
+  try {
+    const creations = await getCreations();
+    console.log('Verbindung zu Supabase erfolgreich. Gefundene Daten:', creations);
+  } catch (error) {
+    console.error('Fehler bei der Verbindung zu Supabase:', error);
+  }
+};*/
+
+window.onload = async () => {
+  try {
+    const creations = await getCreations();
+    console.log('Verbindung zu Supabase erfolgreich. Gefundene Daten:', creations);
+  } catch (error) {
+    console.error('Fehler bei der Verbindung zu Supabase:', error);
+  }
+
+  const nickname = sessionStorage.getItem("mindmap_nickname");
+  //const nickname = localStorage.getItem("mindmap_nickname");
+  const params = new URLSearchParams(window.location.search);
+  const mindmapId = params.get('id');
+
+  if (mindmapId && !nickname) {
+    createNicknameModal(); // oder: document.getElementById('nicknameModal').style.display = 'block';
+  }
+};
