@@ -1,4 +1,6 @@
-import { supabase } from './supabase/client.js';
+import { supabase } from '../../supabase/client.js';
+import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
 
 
 const params = new URLSearchParams(window.location.search);
@@ -271,7 +273,7 @@ async function loadMindmapFromDB(id) {
 
 }
 
-import { getCreations, saveCreation } from './supabase/database.js';  // Pfad anpassen
+import { getCreations, saveCreation } from '../../supabase/database.js';  // Pfad anpassen
 /*
 window.onload = async () => {
   try {
@@ -309,7 +311,7 @@ function getSVGSource() {
 }
 
 
-async function saveCurrentMindmap() {
+export async function saveCurrentMindmap() {
   const title = prompt("Titel eingeben:");
   if (!title) return;
 
@@ -816,7 +818,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 
-
+/*
 async function exportMindmapToPDF() {
   const { jsPDF } = window.jspdf;
 
@@ -830,6 +832,22 @@ async function exportMindmapToPDF() {
 
   // svg2pdf erwartet ein Promise (oder callback)
   await window.svg2pdf(svgElement, pdf, {
+    xOffset: 0,
+    yOffset: 0,
+    scale: 1
+  });
+
+  pdf.save("mindmap.pdf");
+} */
+
+export async function exportMindmapToPDF() {
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'pt',
+    format: [svg.clientWidth, svg.clientHeight],
+  });
+
+  await svg2pdf(svg, pdf, {
     xOffset: 0,
     yOffset: 0,
     scale: 1

@@ -30,7 +30,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.50.2",
     "@y/websocket-server": "^0.1.1",
+    "jspdf": "^3.0.1",
     "socket.io": "^4.8.1",
+    "svg2pdf.js": "^2.5.0",
     "ws": "^8.18.2",
     "y-leveldb": "^0.2.0",
     "y-websocket": "^3.0.0",

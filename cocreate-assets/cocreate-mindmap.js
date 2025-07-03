@@ -1,4 +1,3 @@
-import { setupMindmap, saveCurrentMindmap } from './scripts/script-core.js';
 
 export class CoCreateMindmap extends HTMLElement {
   constructor() {
@@ -68,16 +67,6 @@ export class CoCreateMindmap extends HTMLElement {
         <svg id="mindmap" width="1000" height="600"></svg>
       </div>
     `;
-
-      const svg = this.shadowRoot.getElementById('mindmap');
-      const toolbar = this.shadowRoot.getElementById('toolbar');
-      const saveBtn = this.shadowRoot.getElementById('saveButton');
-
-      setupMindmap({
-        svgElement: svg,
-        toolbar: toolbar,
-        saveButton: saveBtn,
-      });
 
     this.shadowRoot.appendChild(container);  
   }
