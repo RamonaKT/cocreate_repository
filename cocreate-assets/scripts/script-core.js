@@ -882,10 +882,10 @@ async function loadUsersForCurrentMindmap(shadowRoot = document) {
       div.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         userToLock = user.nickname;
-        document.getElementById('dialogIconOverviewUser').close();
+        shadowRoot.getElementById('dialogIconOverviewUser').close();
 
-        document.getElementById('ipLockOverlay').style.display = 'flex';
-        document.getElementById('overlayMessage').textContent =
+        shadowRoot.getElementById('ipLockOverlay').style.display = 'flex';
+        shadowRoot.getElementById('overlayMessage').textContent =
           `Do you want to lock IP from "${user.nickname}" ?`;
       });
     }
