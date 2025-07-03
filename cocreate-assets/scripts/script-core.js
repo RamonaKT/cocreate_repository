@@ -104,6 +104,34 @@ function highlightNode(id, on) {
   else shape.classList.remove('highlighted');
 }
 
+function createNicknameModal(shadowroot = document) {
+    if (document.getElementById('nicknameModal')) return; 
+
+    const modal = document.createElement('div');
+    modal.id = 'nicknameModal';
+
+    modal.innerHTML = `
+    <div class="modal-content">
+      <h2>Nickname wählen</h2>
+      <input id="nicknameInput" type="text" placeholder="Dein Nickname" />
+      <button id="nicknameSubmitButton">Speichern</button>
+    </div>
+  `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
+
+
+  document.getElementById('nicknameInput').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitNickname();
+    }
+  });
+
+}
+
 function addEventListenersToNode(group, id, r) {
   const node = allNodes.find(n => n.id === id);
   if (!node) return;
@@ -299,7 +327,7 @@ async function initializeAccessControl(shadowRoot) {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
   if (!mindmapId) return;
 
-  createNicknameModal(shadowRoot); // Modal vorbereiten
+  createNicknameModal(); // Modal vorbereiten
 
   let ip = 'unknown';
   try {
@@ -308,7 +336,7 @@ async function initializeAccessControl(shadowRoot) {
     ip = data.ip;
   } catch (err) {
     console.warn("IP konnte nicht ermittelt werden:", err);
-    showNicknameModal(shadowRoot);
+    showNicknameModal();
     return;
   }
 
@@ -357,14 +385,14 @@ async function initializeAccessControl(shadowRoot) {
     console.error("Fehler bei Login über IP:", err);
   }
 
-  showNicknameModal(shadowRoot);
+  showNicknameModal();
 }
 
-function showNicknameModal(shadowRoot) {
+function showNicknameModal(shadowRoot = document) {
   let modal = shadowRoot.getElementById('nicknameModal');
 
   if (!modal) {
-    createNicknameModal(shadowRoot);
+    createNicknameModal();
     modal = shadowRoot.getElementById('nicknameModal');
   }
 
@@ -405,7 +433,7 @@ function startIpLockWatcher(ip, mindmapId, shadowRoot) {
               console.log(`🔓 Nutzer ${user.nickname} automatisch entsperrt.`);
             } else {
               console.warn(`🚫 Nutzer ${user.nickname} ist noch gesperrt.`);
-              showNicknameModal(shadowRoot);
+              showNicknameModal();
               return;
             }
           }
@@ -1324,35 +1352,7 @@ function updateViewBox() {
   svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
 }
 
-  
 
-function createNicknameModal() {
-  if (document.getElementById('nicknameModal')) return; 
-
-  const modal = document.createElement('div');
-  modal.id = 'nicknameModal';
-
-  modal.innerHTML = `
-  <div class="modal-content">
-    <h2>Nickname wählen</h2>
-    <input id="nicknameInput" type="text" placeholder="Dein Nickname" />
-    <button id="nicknameSubmitButton">Speichern</button>
-  </div>
-`;
-
-  document.body.appendChild(modal);
-
-  document.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
-
-
-document.getElementById('nicknameInput').addEventListener('keydown', function (event) {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    submitNickname();
-  }
-});
-
-}
 
 
     initializeAccessControl(shadowRoot);
@@ -1368,31 +1368,69 @@ if (mindmapId) {
 }
 
 
+window.addEventListener('load', async () => {
+  const mindmapId = new URLSearchParams(window.location.search).get('id');
+  if (!mindmapId) return;
 
-/*
-window.onload = async () => {
+  // Modal vorbereiten (erstellen)
+  createNicknameModal();
+
+  let ip = 'unknown';
   try {
-    const creations = await getCreations();
-    console.log('Verbindung zu Supabase erfolgreich. Gefundene Daten:', creations);
-  } catch (error) {
-    console.error('Fehler bei der Verbindung zu Supabase:', error);
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+  } catch (err) {
+    console.warn("IP konnte nicht ermittelt werden:", err);
+    showNicknameModal();
+    return;
   }
-};*/
 
-window.onload = async () => {
+  // Nickname aus localStorage?
+  const storedNickname = localStorage.getItem("mindmap_nickname");
+
+  if (storedNickname) {
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('nickname', storedNickname)
+        .eq('ipadress', ip)
+        .maybeSingle();
+
+      if (!error && user && !user.locked && user.mindmap_id == mindmapId) {
+        userNickname = storedNickname;
+        console.log("Automatisch eingeloggt:", userNickname);
+        document.getElementById('nicknameModal')?.remove();
+        startIpLockWatcher(ip);
+        return;
+      }
+    } catch (e) {
+      console.error("Fehler bei Login mit gespeicherten Nickname:", e);
+    }
+  }
+
+  // Versuch per IP
   try {
-    const creations = await getCreations();
-    console.log('Verbindung zu Supabase erfolgreich. Gefundene Daten:', creations);
-  } catch (error) {
-    console.error('Fehler bei der Verbindung zu Supabase:', error);
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('ipadress', ip)
+      .eq('mindmap_id', mindmapId)
+      .maybeSingle();
+
+    if (!error && user && !user.locked) {
+      userNickname = user.nickname;
+      localStorage.setItem("mindmap_nickname", userNickname);
+      console.log("Automatisch über IP eingeloggt:", userNickname);
+      document.getElementById('nicknameModal')?.remove();
+      startIpLockWatcher(ip);
+      return;
+    }
+  } catch (err) {
+    console.error("Fehler bei Login über IP:", err);
   }
 
-  const nickname = sessionStorage.getItem("mindmap_nickname");
-  //const nickname = localStorage.getItem("mindmap_nickname");
-  const params = new URLSearchParams(window.location.search);
-  const mindmapId = params.get('id');
-
-  if (mindmapId && !nickname) {
-    createNicknameModal(); // oder: document.getElementById('nicknameModal').style.display = 'block';
-  }
-};
+  // Fallback → Nickname abfragen
+  showNicknameModal();
+});
