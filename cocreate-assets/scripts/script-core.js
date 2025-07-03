@@ -15,6 +15,94 @@ let svg = null;
 
 
 
+function updateConnections(movedId) {
+  allConnections.forEach(conn => {
+    if (conn.fromId === movedId || conn.toId === movedId) {
+      const from = allNodes.find(n => n.id === conn.fromId);
+      const to = allNodes.find(n => n.id === conn.toId);
+      conn.line.setAttribute("x1", from.x);
+      conn.line.setAttribute("y1", from.y);
+      conn.line.setAttribute("x2", to.x);
+      conn.line.setAttribute("y2", to.y);
+    }
+  });
+}
+
+function connectNodes(fromId, toId, fromNetwork = false) {
+  const from = allNodes.find(n => n.id === fromId);
+  const to = allNodes.find(n => n.id === toId);
+  if (!from || !to) return;
+
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.setAttribute("x1", from.x);
+  line.setAttribute("y1", from.y);
+  line.setAttribute("x2", to.x);
+  line.setAttribute("y2", to.y);
+  line.dataset.from = fromId;
+  line.dataset.to = toId;
+
+  line.setAttribute("stroke", "#888");
+  line.setAttribute("stroke-width", "3");
+  line.setAttribute("class", "connection-line");
+
+  svg.appendChild(line);
+
+  line.addEventListener("click", e => {
+    e.stopPropagation();
+
+    if (selectedNode !== null) {
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    }
+    if (selectedConnection) {
+      selectedConnection.classList.remove("highlighted");
+    }
+
+    selectedConnection = line;
+    selectedConnection.classList.add("highlighted");
+  });
+
+  line.addEventListener("contextmenu", e => {
+    e.preventDefault();
+
+    const fromId = line.dataset.from;
+    const toId = line.dataset.to;
+
+    deleteConnection(fromId, toId);
+
+
+
+    if (selectedConnection === line) selectedConnection = null;
+  });
+
+
+  svg.insertBefore(line, svg.firstChild);
+  allConnections.push({ fromId, toId, line });
+
+  if (!fromNetwork) {
+    yConnections.push([{ fromId, toId }]);
+  }
+
+}  
+      
+function deleteConnection(fromId, toId) {
+  const current = yConnections.toArray();
+  const updated = current.filter(conn => !(conn.fromId === fromId && conn.toId === toId));
+  yConnections.delete(0, yConnections.length);
+  yConnections.push(updated);
+}
+
+
+function highlightNode(id, on) {
+  const node = allNodes.find(n => n.id === id);
+  if (!node) return;
+
+  const shape = node.group.querySelector('ellipse, rect');
+  if (!shape) return;
+
+  if (on) shape.classList.add('highlighted');
+  else shape.classList.remove('highlighted');
+}
 
 function addEventListenersToNode(group, id, r) {
   const node = allNodes.find(n => n.id === id);
@@ -333,481 +421,6 @@ function startIpLockWatcher(ip, mindmapId, shadowRoot) {
   checkLock();
 }
 
-
-export function setupMindmap(shadowRoot) {
-  svg = shadowRoot.getElementById('mindmap');
-  if (!svg) {
-    console.error("SVG nicht im Shadow DOM gefunden!");
-    return;
-  }
-
-  svg.style.touchAction = 'none';
-
-  
-
-  
-  const saveBtn = shadowRoot.getElementById('saveButton');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', saveCurrentMindmap);
-  }
-
-  shadowRoot.querySelectorAll('.node-template').forEach(el => {
-    el.addEventListener('dragstart', e => {
-      draggedType = e.target.getAttribute('data-type');
-    });
-  });
-
-  svg.addEventListener('dragover', e => e.preventDefault());
-
-  svg.addEventListener('drop', e => {
-    e.preventDefault();
-    const svgPoint = getSVGPoint(e.clientX, e.clientY);
-    createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
-  });
-
-  svg.addEventListener('pointermove', e => {
-    if (dragLine) {
-      const svgPoint = getSVGPoint(e.clientX, e.clientY);
-      dragLine.setAttribute("x2", svgPoint.x);
-      dragLine.setAttribute("y2", svgPoint.y);
-    }
-  });
-
-  dragLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-svg.appendChild(dragLine);
-
-if (dragLine) {
-  svg.removeChild(dragLine);
-  dragLine = null;
-}
-
-
-  svg.addEventListener('click', () => {
-    if (selectedNode) {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
-    }
-    if (selectedConnection) {
-      selectedConnection.classList.remove('highlighted');
-      selectedConnection = null;
-    }
-  });
-
-  const confirmBtn = shadowRoot.getElementById('confirmLockBtn');
-  if (confirmBtn) {
-    confirmBtn.addEventListener('click', async () => {
-      if (userToLock) {
-        await lockUserByNickname(userToLock);
-        const messageBox = shadowRoot.getElementById('overlayMessage');
-        messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
-
-        shadowRoot.querySelector('.overlay-buttons').style.display = 'none';
-
-        setTimeout(() => {
-          shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
-          shadowRoot.querySelector('.overlay-buttons').style.display = 'flex';
-          userToLock = null;
-        }, 2000);
-      }
-    });
-  }
-
-  const cancelBtn = shadowRoot.getElementById('cancelLockBtn');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', () => {
-      shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
-      userToLock = null;
-    });
-  }
-
-
-  
-async function loadMindmapFromDB(id) {
-  const { data, error } = await supabase
-    .from('creations')
-    .select('svg_code, title, admin_ip')
-    .eq('creationid', id)
-    .single();
-
-  if (error || !data) {
-    alert("Mindmap nicht gefunden.");
-    return;
-  }
-
-  const parser = new DOMParser();
-  const svgDoc = parser.parseFromString(data.svg_code, "image/svg+xml");
-  const loadedSVG = svgDoc.documentElement;
-
-
-  svg.innerHTML = loadedSVG.innerHTML; // Inhalte übernehmen
-
-  svg.setAttribute("viewBox", loadedSVG.getAttribute("viewBox") || "0 0 1000 600");
-
-  // Initialisiere geladene Knoten
-  svg.querySelectorAll('g.draggable').forEach(group => {
-    const id = group.dataset.nodeId || 'node' + allNodes.length;
-
-    const transform = group.getAttribute("transform");
-    const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-    const x = parseFloat(match?.[1] || 0);
-    const y = parseFloat(match?.[2] || 0);
-
-    const shape = group.querySelector('ellipse, rect');
-    const r = shape?.getAttribute('rx') || shape?.getAttribute('r') || 40;
-
-    const text = group.querySelector('text');
-    if (text) {
-      const node = allNodes.find(n => n.id === id);
-      const yNodeData = yNodes.get(id);
-      if (yNodeData?.label) {
-        text.textContent = yNodeData.label;
-      }
-    }
-
-
-    allNodes.push({ id, group, x, y, r: parseFloat(r) });
-
-    // EventListener hinzufügen wie in createDraggableNode()
-    addEventListenersToNode(group, id, parseFloat(r));
-  });
-
-
-
-
-
-  svg.querySelectorAll('line.connection-line').forEach(line => {
-    const fromId = line.dataset.from;
-    const toId = line.dataset.to;
-    if (fromId && toId) {
-      // Event-Handling hinzufügen
-      line.addEventListener("click", e => {
-        e.stopPropagation();
-
-        if (selectedNode !== null) {
-          highlightNode(selectedNode, false);
-          selectedNode = null;
-        }
-        if (selectedConnection) {
-          selectedConnection.classList.remove("highlighted");
-        }
-
-        selectedConnection = line;
-        selectedConnection.classList.add("highlighted");
-      });
-
-
-      line.addEventListener("contextmenu", e => {
-        e.preventDefault();
-        if (svg.contains(line)) {
-          svg.removeChild(line);
-        }
-
-        const fromId = line.dataset.from;
-        const toId = line.dataset.to;
-
-        /*  const index = yConnections.toArray().findIndex(conn => conn.fromId === fromId && conn.toId === toId);
-          if (index !== -1) {
-            // ✅ Direkt aus toArray holen (unverändert!)
-            const deletedConnection = yConnections.toArray()[index];
-            console.log('🗑️ Lösche Verbindung:', { fromId, toId });
-            console.log(' Vorherige array:', yConnections.toArray());
-            yConnections.delete(index, 1);
-            console.log(' Nachher:', yConnections.toArray());
-  
-  
-            // Jetzt kannst du sicher mit deletedConnection arbeiten
-            const conn = allConnections.find(c => c.fromId === deletedConnection.fromId && c.toId === deletedConnection.toId);
-            if (conn) {
-              svg.removeChild(conn.line);
-              allConnections = allConnections.filter(c => c !== conn);
-            }
-          }*/
-
-        /*   for (let i = 0; i < yConnections.length; i++) {
-             const conn = yConnections.get(i);
-             if (conn.fromId === fromId && conn.toId === toId) {
-               yConnections.delete(i, 1);
-               break;
-             }
-               
-           }*/
-
-        deleteConnection(fromId, toId);
-        if (selectedConnection === line) selectedConnection = null;
-      });
-
-      // Gibt es die Verbindung schon in yConnections?
-     /* const alreadyExists = yConnections.toArray().some(conn =>
-        conn.fromId === fromId && conn.toId === toId
-      );*/
-
-      if (!initialSyncDone) {
-      const alreadyExists = yConnections.toArray().some(conn =>
-        conn.fromId === fromId && conn.toId === toId
-      );
-      if (!alreadyExists) {
-        yConnections.push([{ fromId, toId }]);
-        console.log('⏳ Alte Verbindung in YJS eingetragen:', fromId, '→', toId);
-      }
-    }
-
-      /* if (!alreadyExists) {
-         yConnections.push([{ fromId, toId }]);
-         console.log('⏳ Alte Verbindung in YJS eingetragen:', fromId, '→', toId);
-       }*/
-      allConnections.push({ fromId, toId, line });
-
-    }
-  });
-
-}
-
-// Drag-Bewegung
-svg.addEventListener('pointermove', e => {
-  if (!dragTarget) return;
-  const point = getSVGPoint(e.clientX, e.clientY);
-  const id = dragTarget.dataset.nodeId;
-  const node = allNodes.find(n => n.id === id);
-  if (!node) return;
-
-  const newX = point.x - offset.x;
-  const newY = point.y - offset.y;
-  dragTarget.setAttribute("transform", `translate(${newX}, ${newY})`);
-  node.x = newX;
-  node.y = newY;
-
-  yNodes.set(id, { ...yNodes.get(id), x: newX, y: newY });
-
-  console.log(" node-moving gesendet", node.id, node.x, node.y);
-  updateConnections(id);
-});
-
-
-
-// Deselect auf SVG-Klick
-svg.addEventListener('click', () => {
-  if (selectedNode !== null) {
-    highlightNode(selectedNode, false);
-    selectedNode = null;
-  }
-  if (selectedConnection) {
-    selectedConnection.classList.remove('highlighted');
-    selectedConnection = null;
-  }
-});
-
-function updateConnections(movedId) {
-  allConnections.forEach(conn => {
-    if (conn.fromId === movedId || conn.toId === movedId) {
-      const from = allNodes.find(n => n.id === conn.fromId);
-      const to = allNodes.find(n => n.id === conn.toId);
-      conn.line.setAttribute("x1", from.x);
-      conn.line.setAttribute("y1", from.y);
-      conn.line.setAttribute("x2", to.x);
-      conn.line.setAttribute("y2", to.y);
-    }
-  });
-}
-
-function connectNodes(fromId, toId, fromNetwork = false) {
-  const from = allNodes.find(n => n.id === fromId);
-  const to = allNodes.find(n => n.id === toId);
-  if (!from || !to) return;
-
-  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  line.setAttribute("x1", from.x);
-  line.setAttribute("y1", from.y);
-  line.setAttribute("x2", to.x);
-  line.setAttribute("y2", to.y);
-  line.dataset.from = fromId;
-  line.dataset.to = toId;
-
-  line.setAttribute("stroke", "#888");
-  line.setAttribute("stroke-width", "3");
-  line.setAttribute("class", "connection-line");
-
-  svg.appendChild(line);
-
-  line.addEventListener("click", e => {
-    e.stopPropagation();
-
-    if (selectedNode !== null) {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
-    }
-    if (selectedConnection) {
-      selectedConnection.classList.remove("highlighted");
-    }
-
-    selectedConnection = line;
-    selectedConnection.classList.add("highlighted");
-  });
-
-  line.addEventListener("contextmenu", e => {
-    e.preventDefault();
-
-    const fromId = line.dataset.from;
-    const toId = line.dataset.to;
-
-    deleteConnection(fromId, toId);
-
-
-
-    if (selectedConnection === line) selectedConnection = null;
-  });
-
-
-  svg.insertBefore(line, svg.firstChild);
-  allConnections.push({ fromId, toId, line });
-
-  if (!fromNetwork) {
-    yConnections.push([{ fromId, toId }]);
-  }
-
-}
-
-// Delete-Taste zum Entfernen von Knoten oder Verbindung
-document.addEventListener('keydown', (e) => {
-  const activeElement = document.activeElement;
-  if (activeElement && (
-    activeElement.tagName === "INPUT" ||
-    activeElement.tagName === "TEXTAREA" ||
-    activeElement.isContentEditable
-  )) {
-    return;
-  }
-
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    e.preventDefault();
-
-    if (selectedConnection) {
-      const fromId = selectedConnection.dataset.from;
-      const toId = selectedConnection.dataset.to;
-
-      deleteConnection(fromId, toId);
-
-      selectedConnection = null;
-      return;
-    }
-
-
-
-    if (selectedNode) {
-      const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
-      if (nodeIndex === -1) return;
-
-      const node = allNodes[nodeIndex];
-      svg.removeChild(node.group);
-      allNodes.splice(nodeIndex, 1);
-
-      yNodes.delete(selectedNode);
-
-
-      // Verbindungen mit dem Knoten entfernen
-      allConnections = allConnections.filter(conn => {
-        if (conn.fromId === selectedNode || conn.toId === selectedNode) {
-          svg.removeChild(conn.line);
-          return false;
-        }
-        return true;
-      });
-
-      selectedNode = null;
-    }
-  }
-});
-
-
-svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-
-let zoom = 1;
-const zoomStep = 0.025;
-const minZoom = 0.1;
-const maxZoom = 3;
-
-// Zoom mit Mausrad
-svg.addEventListener("wheel", (e) => {
-  e.preventDefault();
-
-  // Zoomrichtung
-  zoom += e.deltaY > 0 ? -zoomStep : zoomStep;
-  zoom = Math.min(Math.max(zoom, minZoom), maxZoom);
-
-  // Zoom um Mausposition (optional)
-  const mouseSVG = getSVGPoint(e.clientX, e.clientY);
-
-  // Neue ViewBox-Größe basierend auf Zoom
-  const newWidth = initialViewBoxSize / zoom;
-  const newHeight = initialViewBoxSize / zoom;
-
-  // ViewBox so verschieben, dass Zoom um Mausposition bleibt
-  viewBox.x = mouseSVG.x - (mouseSVG.x - viewBox.x) * (newWidth / viewBox.w);
-  viewBox.y = mouseSVG.y - (mouseSVG.y - viewBox.y) * (newHeight / viewBox.h);
-  viewBox.w = newWidth;
-  viewBox.h = newHeight;
-
-  updateViewBox();
-});
-
-function updateViewBox() {
-  svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-}
-
-  
-
-function createNicknameModal() {
-  if (document.getElementById('nicknameModal')) return; 
-
-  const modal = document.createElement('div');
-  modal.id = 'nicknameModal';
-
-  modal.innerHTML = `
-  <div class="modal-content">
-    <h2>Nickname wählen</h2>
-    <input id="nicknameInput" type="text" placeholder="Dein Nickname" />
-    <button id="nicknameSubmitButton">Speichern</button>
-  </div>
-`;
-
-  document.body.appendChild(modal);
-
-  document.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
-
-
-document.getElementById('nicknameInput').addEventListener('keydown', function (event) {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    submitNickname();
-  }
-});
-
-}
-    
-function deleteConnection(fromId, toId) {
-  const current = yConnections.toArray();
-  const updated = current.filter(conn => !(conn.fromId === fromId && conn.toId === toId));
-  yConnections.delete(0, yConnections.length);
-  yConnections.push(updated);
-}
-
-
-
-function highlightNode(id, on) {
-  const node = allNodes.find(n => n.id === id);
-  if (!node) return;
-
-  const shape = node.group.querySelector('ellipse, rect');
-  if (!shape) return;
-
-  if (on) shape.classList.add('highlighted');
-  else shape.classList.remove('highlighted');
-}
-
-    initializeAccessControl(shadowRoot);
-
-
-  console.log("✅ Mindmap im Shadow DOM vollständig initialisiert");
-}
 
 
 
@@ -1390,3 +1003,392 @@ yConnections.observe(event => {
 
   priorConnections = current.map(c => ({ ...c }));
 });
+
+
+
+
+export function setupMindmap(shadowRoot) {
+  svg = shadowRoot.getElementById('mindmap');
+  if (!svg) {
+    console.error("SVG nicht im Shadow DOM gefunden!");
+    return;
+  }
+
+  svg.style.touchAction = 'none';
+
+  
+  const saveBtn = shadowRoot.getElementById('saveButton');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveCurrentMindmap);
+  }
+
+  shadowRoot.querySelectorAll('.node-template').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      draggedType = e.target.getAttribute('data-type');
+    });
+  });
+
+  svg.addEventListener('dragover', e => e.preventDefault());
+
+  svg.addEventListener('drop', e => {
+    e.preventDefault();
+    const svgPoint = getSVGPoint(e.clientX, e.clientY);
+    createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
+  });
+
+  svg.addEventListener('pointermove', e => {
+    if (dragLine) {
+      const svgPoint = getSVGPoint(e.clientX, e.clientY);
+      dragLine.setAttribute("x2", svgPoint.x);
+      dragLine.setAttribute("y2", svgPoint.y);
+    }
+  });
+
+  dragLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+svg.appendChild(dragLine);
+
+if (dragLine) {
+  svg.removeChild(dragLine);
+  dragLine = null;
+}
+
+
+  svg.addEventListener('click', () => {
+    if (selectedNode) {
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    }
+    if (selectedConnection) {
+      selectedConnection.classList.remove('highlighted');
+      selectedConnection = null;
+    }
+  });
+
+  const confirmBtn = shadowRoot.getElementById('confirmLockBtn');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      if (userToLock) {
+        await lockUserByNickname(userToLock);
+        const messageBox = shadowRoot.getElementById('overlayMessage');
+        messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
+
+        shadowRoot.querySelector('.overlay-buttons').style.display = 'none';
+
+        setTimeout(() => {
+          shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
+          shadowRoot.querySelector('.overlay-buttons').style.display = 'flex';
+          userToLock = null;
+        }, 2000);
+      }
+    });
+  }
+
+  const cancelBtn = shadowRoot.getElementById('cancelLockBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
+      userToLock = null;
+    });
+  }
+
+
+  
+async function loadMindmapFromDB(id) {
+  const { data, error } = await supabase
+    .from('creations')
+    .select('svg_code, title, admin_ip')
+    .eq('creationid', id)
+    .single();
+
+  if (error || !data) {
+    alert("Mindmap nicht gefunden.");
+    return;
+  }
+
+  const parser = new DOMParser();
+  const svgDoc = parser.parseFromString(data.svg_code, "image/svg+xml");
+  const loadedSVG = svgDoc.documentElement;
+
+
+  svg.innerHTML = loadedSVG.innerHTML; // Inhalte übernehmen
+
+  svg.setAttribute("viewBox", loadedSVG.getAttribute("viewBox") || "0 0 1000 600");
+
+  // Initialisiere geladene Knoten
+  svg.querySelectorAll('g.draggable').forEach(group => {
+    const id = group.dataset.nodeId || 'node' + allNodes.length;
+
+    const transform = group.getAttribute("transform");
+    const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    const x = parseFloat(match?.[1] || 0);
+    const y = parseFloat(match?.[2] || 0);
+
+    const shape = group.querySelector('ellipse, rect');
+    const r = shape?.getAttribute('rx') || shape?.getAttribute('r') || 40;
+
+    const text = group.querySelector('text');
+    if (text) {
+      const node = allNodes.find(n => n.id === id);
+      const yNodeData = yNodes.get(id);
+      if (yNodeData?.label) {
+        text.textContent = yNodeData.label;
+      }
+    }
+
+
+    allNodes.push({ id, group, x, y, r: parseFloat(r) });
+
+    // EventListener hinzufügen wie in createDraggableNode()
+    addEventListenersToNode(group, id, parseFloat(r));
+  });
+
+
+
+
+
+  svg.querySelectorAll('line.connection-line').forEach(line => {
+    const fromId = line.dataset.from;
+    const toId = line.dataset.to;
+    if (fromId && toId) {
+      // Event-Handling hinzufügen
+      line.addEventListener("click", e => {
+        e.stopPropagation();
+
+        if (selectedNode !== null) {
+          highlightNode(selectedNode, false);
+          selectedNode = null;
+        }
+        if (selectedConnection) {
+          selectedConnection.classList.remove("highlighted");
+        }
+
+        selectedConnection = line;
+        selectedConnection.classList.add("highlighted");
+      });
+
+
+      line.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        if (svg.contains(line)) {
+          svg.removeChild(line);
+        }
+
+        const fromId = line.dataset.from;
+        const toId = line.dataset.to;
+
+        /*  const index = yConnections.toArray().findIndex(conn => conn.fromId === fromId && conn.toId === toId);
+          if (index !== -1) {
+            // ✅ Direkt aus toArray holen (unverändert!)
+            const deletedConnection = yConnections.toArray()[index];
+            console.log('🗑️ Lösche Verbindung:', { fromId, toId });
+            console.log(' Vorherige array:', yConnections.toArray());
+            yConnections.delete(index, 1);
+            console.log(' Nachher:', yConnections.toArray());
+  
+  
+            // Jetzt kannst du sicher mit deletedConnection arbeiten
+            const conn = allConnections.find(c => c.fromId === deletedConnection.fromId && c.toId === deletedConnection.toId);
+            if (conn) {
+              svg.removeChild(conn.line);
+              allConnections = allConnections.filter(c => c !== conn);
+            }
+          }*/
+
+        /*   for (let i = 0; i < yConnections.length; i++) {
+             const conn = yConnections.get(i);
+             if (conn.fromId === fromId && conn.toId === toId) {
+               yConnections.delete(i, 1);
+               break;
+             }
+               
+           }*/
+
+        deleteConnection(fromId, toId);
+        if (selectedConnection === line) selectedConnection = null;
+      });
+
+      // Gibt es die Verbindung schon in yConnections?
+     /* const alreadyExists = yConnections.toArray().some(conn =>
+        conn.fromId === fromId && conn.toId === toId
+      );*/
+
+      if (!initialSyncDone) {
+      const alreadyExists = yConnections.toArray().some(conn =>
+        conn.fromId === fromId && conn.toId === toId
+      );
+      if (!alreadyExists) {
+        yConnections.push([{ fromId, toId }]);
+        console.log('⏳ Alte Verbindung in YJS eingetragen:', fromId, '→', toId);
+      }
+    }
+
+      /* if (!alreadyExists) {
+         yConnections.push([{ fromId, toId }]);
+         console.log('⏳ Alte Verbindung in YJS eingetragen:', fromId, '→', toId);
+       }*/
+      allConnections.push({ fromId, toId, line });
+
+    }
+  });
+
+}
+
+// Drag-Bewegung
+svg.addEventListener('pointermove', e => {
+  if (!dragTarget) return;
+  const point = getSVGPoint(e.clientX, e.clientY);
+  const id = dragTarget.dataset.nodeId;
+  const node = allNodes.find(n => n.id === id);
+  if (!node) return;
+
+  const newX = point.x - offset.x;
+  const newY = point.y - offset.y;
+  dragTarget.setAttribute("transform", `translate(${newX}, ${newY})`);
+  node.x = newX;
+  node.y = newY;
+
+  yNodes.set(id, { ...yNodes.get(id), x: newX, y: newY });
+
+  console.log(" node-moving gesendet", node.id, node.x, node.y);
+  updateConnections(id);
+});
+
+
+
+// Deselect auf SVG-Klick
+svg.addEventListener('click', () => {
+  if (selectedNode !== null) {
+    highlightNode(selectedNode, false);
+    selectedNode = null;
+  }
+  if (selectedConnection) {
+    selectedConnection.classList.remove('highlighted');
+    selectedConnection = null;
+  }
+});
+
+
+// Delete-Taste zum Entfernen von Knoten oder Verbindung
+document.addEventListener('keydown', (e) => {
+  const activeElement = document.activeElement;
+  if (activeElement && (
+    activeElement.tagName === "INPUT" ||
+    activeElement.tagName === "TEXTAREA" ||
+    activeElement.isContentEditable
+  )) {
+    return;
+  }
+
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+
+    if (selectedConnection) {
+      const fromId = selectedConnection.dataset.from;
+      const toId = selectedConnection.dataset.to;
+
+      deleteConnection(fromId, toId);
+
+      selectedConnection = null;
+      return;
+    }
+
+
+
+    if (selectedNode) {
+      const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
+      if (nodeIndex === -1) return;
+
+      const node = allNodes[nodeIndex];
+      svg.removeChild(node.group);
+      allNodes.splice(nodeIndex, 1);
+
+      yNodes.delete(selectedNode);
+
+
+      // Verbindungen mit dem Knoten entfernen
+      allConnections = allConnections.filter(conn => {
+        if (conn.fromId === selectedNode || conn.toId === selectedNode) {
+          svg.removeChild(conn.line);
+          return false;
+        }
+        return true;
+      });
+
+      selectedNode = null;
+    }
+  }
+});
+
+
+svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+
+let zoom = 1;
+const zoomStep = 0.025;
+const minZoom = 0.1;
+const maxZoom = 3;
+
+// Zoom mit Mausrad
+svg.addEventListener("wheel", (e) => {
+  e.preventDefault();
+
+  // Zoomrichtung
+  zoom += e.deltaY > 0 ? -zoomStep : zoomStep;
+  zoom = Math.min(Math.max(zoom, minZoom), maxZoom);
+
+  // Zoom um Mausposition (optional)
+  const mouseSVG = getSVGPoint(e.clientX, e.clientY);
+
+  // Neue ViewBox-Größe basierend auf Zoom
+  const newWidth = initialViewBoxSize / zoom;
+  const newHeight = initialViewBoxSize / zoom;
+
+  // ViewBox so verschieben, dass Zoom um Mausposition bleibt
+  viewBox.x = mouseSVG.x - (mouseSVG.x - viewBox.x) * (newWidth / viewBox.w);
+  viewBox.y = mouseSVG.y - (mouseSVG.y - viewBox.y) * (newHeight / viewBox.h);
+  viewBox.w = newWidth;
+  viewBox.h = newHeight;
+
+  updateViewBox();
+});
+
+function updateViewBox() {
+  svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+}
+
+  
+
+function createNicknameModal() {
+  if (document.getElementById('nicknameModal')) return; 
+
+  const modal = document.createElement('div');
+  modal.id = 'nicknameModal';
+
+  modal.innerHTML = `
+  <div class="modal-content">
+    <h2>Nickname wählen</h2>
+    <input id="nicknameInput" type="text" placeholder="Dein Nickname" />
+    <button id="nicknameSubmitButton">Speichern</button>
+  </div>
+`;
+
+  document.body.appendChild(modal);
+
+  document.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
+
+
+document.getElementById('nicknameInput').addEventListener('keydown', function (event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    submitNickname();
+  }
+});
+
+}
+
+
+    initializeAccessControl(shadowRoot);
+
+
+  console.log("✅ Mindmap im Shadow DOM vollständig initialisiert");
+}
+
