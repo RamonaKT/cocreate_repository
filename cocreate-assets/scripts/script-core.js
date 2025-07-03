@@ -833,9 +833,9 @@ window.addEventListener('load', async () => {
 });
 
 
-async function loadUsersForCurrentMindmap() {
+async function loadUsersForCurrentMindmap(shadowRoot = document) {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
-  const container = document.getElementById('userListContainer');
+  const container = shadowRoot.getElementById('userListContainer');
   container.innerHTML = ''; // vorher leeren
 
   if (!mindmapId) {

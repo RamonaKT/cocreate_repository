@@ -38,7 +38,7 @@ export class CoCreateMindmap extends HTMLElement {
 
           <img src="cocreate-assets/img/icon-overview.png" alt="Icon overview user"
             style="cursor: pointer;" draggable="false" 
-            onclick="this.getRootNode().getElementById('dialogIconOverviewUser').showModal()">
+            onclick="this.getRootNode().getElementById('dialogIconOverviewUser').showModal(); window.loadUsersForCurrentMindmap(this.getRootNode());">
 
           <dialog id="dialogIconOverviewUser">
             <h2>User-Overview</h2>
