@@ -840,6 +840,9 @@ async function exportMindmapToPDF() {
 }
 
 
+window.exportMindmapToPDF = exportMindmapToPDF;
+
+
 //start of ipaddress locking
 
 let userNickname = null;
