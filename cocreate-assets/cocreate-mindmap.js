@@ -1,3 +1,5 @@
+import { setupMindmap, saveCurrentMindmap } from './scripts/script-core.js';
+
 export class CoCreateMindmap extends HTMLElement {
   constructor() {
     super();
@@ -24,7 +26,7 @@ export class CoCreateMindmap extends HTMLElement {
 
       <div id="mindmap-container">
         <div id="sidebar-left" class="sidebar">
-          <img src="./img/icon-manuell.png" alt="Icon manuell"
+          <img src="cocreate-assets/img/icon-manuell.png" alt="Icon manuell"
             style="cursor: pointer;" draggable="false" 
             onclick="this.getRootNode().getElementById('dialogIconManuell').showModal()">
 
@@ -35,7 +37,7 @@ export class CoCreateMindmap extends HTMLElement {
               onclick="this.closest('dialog').close()">Schließen</button>
           </dialog>
 
-          <img src="./img/icon-overview.png" alt="Icon overview user"
+          <img src="cocreate-assets/img/icon-overview.png" alt="Icon overview user"
             style="cursor: pointer;" draggable="false" 
             onclick="this.getRootNode().getElementById('dialogIconOverviewUser').showModal()">
 
@@ -46,10 +48,10 @@ export class CoCreateMindmap extends HTMLElement {
               onclick="this.closest('dialog').close()">Schließen</button>
           </dialog>
 
-          <img src="./img/icon-download.png" alt="Icon Download pdf"
+          <img src="cocreate-assets/img/icon-download.png" alt="Icon Download pdf"
             class="pdfButton" style="cursor: pointer;" draggable="false">
 
-          <img src="./img/icon-save.png" alt="Icon save" id="saveButton"
+          <img src="cocreate-assets/img/icon-save.png" alt="Icon save" id="saveButton"
             style="cursor: pointer;" draggable="false">
         </div>
 
@@ -66,6 +68,16 @@ export class CoCreateMindmap extends HTMLElement {
         <svg id="mindmap" width="1000" height="600"></svg>
       </div>
     `;
+
+      const svg = this.shadowRoot.getElementById('mindmap');
+      const toolbar = this.shadowRoot.getElementById('toolbar');
+      const saveBtn = this.shadowRoot.getElementById('saveButton');
+
+      setupMindmap({
+        svgElement: svg,
+        toolbar: toolbar,
+        saveButton: saveBtn,
+      });
 
     this.shadowRoot.appendChild(container);  
   }
