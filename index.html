@@ -27,6 +27,7 @@
 
   <div id="sidebar-left" class="sidebar">
 
+
     <!-- Kurzanleitung -->
       <img src="./img/icon-manuell.png" alt="Icon manuell"
        style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconManuell').showModal()">
@@ -44,6 +45,7 @@
       <h2>User-Overview</h2>
       <div id="userListContainer"></div> <!-- ⬅ Hier werden die Nicknames eingefügt -->
       <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
+
     </dialog>
 
     <img src="./img/icon-download.png" alt="Icon Download pdf" class="pdfButton"
@@ -55,12 +57,34 @@
   </div>
   
   
+<div id="ipLockOverlay" style="display: none;">
+  <div class="overlay-box">
+    <p id="overlayMessage">Möchtest du diese IP wirklich sperren?</p>
+    <div class="overlay-buttons">
+      <button id="confirmLockBtn">Ja, sperren</button>
+      <button id="cancelLockBtn">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
   <svg id="mindmap" width="1000" height="600"></svg>
-  
   
   
 
 </div>
+
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
 
 
 
