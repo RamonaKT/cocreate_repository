@@ -27,65 +27,35 @@
 
   <div id="sidebar-left" class="sidebar">
 
-    <!-- NUR ADMIN (user sperren, was sonst noch settings? link erstellen, ) -->
-     <!-- <img src="./img/icon-gear.jpeg" alt="Icon settings"
-       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconSettings').showModal()">
 
-    <dialog id="dialogIconSettings">
-      <h2>Einstellungen</h2>
-      <p>Hier soll z.B. der Admin Nutzer (IP-Adressen) sperren können.</p>
-      <button class="close" draggable="false" onclick="document.getElementById('dialogIconSettings').close()">Schließen</button>
-    </dialog>-->
+    <!-- Kurzanleitung -->
+      <img src="./img/icon-manuell.png" alt="Icon manuell"
+       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconManuell').showModal()">
 
-    <!-- NUR ADMIN -->
-      <img src="./img/icon-plus.jpeg" alt="Icon add" 
-       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconAdd').showModal()">
-
-    <dialog id="dialogIconAdd">
-      <h2>Neuen Raum hinzufügen</h2>
-      <p>Hier soll der Admin neue Unterräume erzuegen können. 
-        Wenn möglich abfragen, ob der Inhalt kopiert werden soll.</p>
-      <button class="close" draggable="false" onclick="document.getElementById('dialogIconAdd').close()">Schließen</button>
+    <dialog id="dialogIconManuell">
+      <h2>Quick-Start manuell</h2>
+      <p>save to open new mindmap. everyone needs access to server. share id. have fun.</p>
+      <button class="close" draggable="false" onclick="document.getElementById('dialogIconManuell').close()">Schließen</button>
     </dialog>
 
-       <img src="./img/icon-pattern.jpeg" alt="Icon room overview"
-       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconOverviewRooms').showModal()">
-
-    <dialog id="dialogIconOverviewRooms">
-      <h2>Übersicht der Räume</h2>
-      <p>Hier soll ein Übersicht über offene Räume zu sehen sein. Das Icon soll nur sichtbar sein, wenn mehrere Räume existieren</p>
-      <button class="close" draggable="false" onclick="document.getElementById('dialogIconOverviewRooms').close()">Schließen</button>
-    </dialog>
-
-       <img src="./img/icon-pen.jpeg" alt="Icon edit username"
-       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconEdit').showModal()">
-<!--
-    <dialog id="dialogIconEdit">
-      <h2>Setze deinen Anzeigenamen!</h2>
-      <p>Hier soll man seinen nickname ändern können. 
-        To-Do: array erstellen mit paar Standardwerten + generell speichern
-      </p>
-      <input type="text" id="setNickname" placeholder="choose wisely">
-      <button onclick="send('setNickname',{value:document.getElementById('setNickname').value})">Festlegen</button>
-      <br>
-      <button class="close" onclick="document.getElementById('dialogIconEdit').close()">Schließen</button>
-    </dialog>-->
-
-      <img src="./img/icon-eye.jpeg" alt="Icon edit username"
- style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconOverviewUser').showModal(); loadUsersForCurrentMindmap();">
-
+      <img src="./img/icon-overview.png" alt="Icon overview user"
+       style="cursor: pointer;" draggable="false" onclick="document.getElementById('dialogIconOverviewUser').showModal()">
 
     <dialog id="dialogIconOverviewUser">
-      <h2>Übersicht der Teilnehmer</h2>
+      <h2>User-Overview</h2>
       <div id="userListContainer"></div> <!-- ⬅ Hier werden die Nicknames eingefügt -->
-      <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button> 
+      <button class="close" onclick="document.getElementById('dialogIconOverviewUser').close()">Schließen</button>
+
     </dialog>
 
-    
+    <img src="./img/icon-download.png" alt="Icon Download pdf" class="pdfButton"
+       style="cursor: pointer;" draggable="false" onclick="exportMindmapToPDF()">
+
+    <img src="./img/icon-save.png" alt="Icon save" id="saveButton"
+       style="cursor: pointer;" draggable="false">
 
   </div>
-  <img src="./img/icon-download.png" alt="Icon Download pdf" class="pdfButton"
-       style="cursor: pointer;" draggable="false" onclick="exportMindmapToPDF()">
+  
   
 <div id="ipLockOverlay" style="display: none;">
   <div class="overlay-box">
@@ -97,12 +67,8 @@
   </div>
 </div>
 
-
-
   <svg id="mindmap" width="1000" height="600"></svg>
   
-  <img src="./img/icon-save.png" alt="Icon save" id="saveButton"
-       style="cursor: pointer;" draggable="false">
   
 
 </div>
