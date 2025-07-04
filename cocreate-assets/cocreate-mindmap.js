@@ -25,11 +25,11 @@ export class CoCreateMindmap extends HTMLElement {
 
       <div id="mindmap-container">
         <div id="sidebar-left" class="sidebar">
-          <img src="cocreate-assets/img/icon-manuell.png" alt="Icon manuell"
+          <img src="cocreate-assets/img/icon-manual.png" alt="Icon manual"
             style="cursor: pointer;" draggable="false" 
-            onclick="this.getRootNode().getElementById('dialogIconManuell').showModal()">
+            onclick="this.getRootNode().getElementById('dialogIconManual').showModal()">
 
-          <dialog id="dialogIconManuell">
+          <dialog id="dialogIconManual">
             <h2>Quick-Start manuell</h2>
             <p>save to open new mindmap. everyone needs access to server. share id. have fun.</p>
             <button class="close" draggable="false"
