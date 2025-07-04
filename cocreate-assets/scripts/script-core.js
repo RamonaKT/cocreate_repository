@@ -384,6 +384,8 @@ async function initializeAccessControl(shadowRoot) {
     console.error("Fehler bei Login über IP:", err);
   }
 
+  loadUsersForCurrentMindmap(shadowRoot);
+
   showNicknameModal();
 }
 
@@ -579,32 +581,6 @@ let viewBox = {
 
 // Pan mit WASD/Pfeiltasten (verschiebt ViewBox um festen Schritt)
 const panStep = 20;
-document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-
-  switch (e.key.toLowerCase()) {
-    case 'w':
-    case 'arrowup':
-      viewBox.y -= panStep * (viewBox.h / initialViewBoxSize);
-      updateViewBox();
-      break;
-    case 's':
-    case 'arrowdown':
-      viewBox.y += panStep * (viewBox.h / initialViewBoxSize);
-      updateViewBox();
-      break;
-    case 'a':
-    case 'arrowleft':
-      viewBox.x -= panStep * (viewBox.w / initialViewBoxSize);
-      updateViewBox();
-      break;
-    case 'd':
-    case 'arrowright':
-      viewBox.x += panStep * (viewBox.w / initialViewBoxSize);
-      updateViewBox();
-      break;
-  }
-});
 
 
 /*
@@ -1152,6 +1128,9 @@ async function loadMindmapFromDB(id) {
 
 
 export function setupMindmap(shadowRoot) {
+  shadowRoot.host.tabIndex = 0; // macht den Host "fokusierbar"
+shadowRoot.host.focus();      // setzt direkt den Fokus
+
   svg = shadowRoot.getElementById('mindmap');
   if (!svg) {
     console.error("SVG nicht im Shadow DOM gefunden!");
@@ -1235,6 +1214,32 @@ if (dragLine) {
     });
   }
 
+shadowRoot.host.addEventListener("keydown", (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+  switch (e.key.toLowerCase()) {
+    case 'w':
+    case 'arrowup':
+      viewBox.y -= panStep * (viewBox.h / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 's':
+    case 'arrowdown':
+      viewBox.y += panStep * (viewBox.h / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 'a':
+    case 'arrowleft':
+      viewBox.x -= panStep * (viewBox.w / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 'd':
+    case 'arrowright':
+      viewBox.x += panStep * (viewBox.w / initialViewBoxSize);
+      updateViewBox();
+      break;
+  }
+});
 
   
 
@@ -1361,6 +1366,17 @@ function updateViewBox() {
   svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
 }
 
+const downloadBtn = shadowRoot.getElementById('downloadbtn');
+if (downloadBtn) {
+  downloadBtn.addEventListener('click', () => {
+    const svgElement = shadowRoot.getElementById('mindmap');
+    if (svgElement) {
+      exportMindmapAsSVG(svgElement);
+    } else {
+      console.error("SVG nicht gefunden für Export.");
+    }
+  });
+}
 
 
 
@@ -1443,3 +1459,19 @@ window.addEventListener('load', async () => {
   // Fallback → Nickname abfragen
   showNicknameModal();
 });
+
+function exportMindmapAsSVG(svgElement) {
+  const serializer = new XMLSerializer();
+  const source = serializer.serializeToString(svgElement);
+  const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "mindmap.svg";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+

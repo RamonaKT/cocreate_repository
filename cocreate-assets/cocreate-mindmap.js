@@ -48,7 +48,7 @@ export class CoCreateMindmap extends HTMLElement {
           </dialog>
 
           <img src="cocreate-assets/img/icon-download.png" alt="Icon Download pdf"
-            class="pdfButton" style="cursor: pointer;" draggable="false">
+            class="pdfButton" id="downloadbtn" style="cursor: pointer;" draggable="false">
 
           <img src="cocreate-assets/img/icon-save.png" alt="Icon save" id="saveButton"
             style="cursor: pointer;" draggable="false">
