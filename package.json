@@ -7,10 +7,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite --port 1235",
+    "dev:all": "concurrently \"npx y-websocket --port 1234 --host 0.0.0.0\" \"vite --port 1235\"",
+    "start": "serve -s dist -l 1235",
     "build": "vite build",
     "preview": "vite preview",
-    "start:ws": "y-websocket-server --port 1234",
-    "start": "concurrently \"npx y-websocket-server --port 1234\" \"npx serve -s dist -l 1235\""
+    "start:ws": "npx y-websocket --port 1234 --host 0.0.0.0"
   },
   "repository": {
     "type": "git",
@@ -36,6 +37,7 @@
     "ws": "^8.18.2",
     "y-leveldb": "^0.2.0",
     "y-websocket": "^3.0.0",
+    "y-websocket-server": "^1.0.2",
     "y-websockets-server": "^9.2.1",
     "yjs": "^13.6.27"
   }
