@@ -1352,6 +1352,17 @@ function updateViewBox() {
   svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
 }
 
+const downloadBtn = shadowRoot.getElementById('downloadbtn');
+if (downloadBtn) {
+  downloadBtn.addEventListener('click', () => {
+    const svgElement = shadowRoot.getElementById('mindmap');
+    if (svgElement) {
+      exportMindmapAsSVG(svgElement);
+    } else {
+      console.error("SVG nicht gefunden für Export.");
+    }
+  });
+}
 
 
 
@@ -1434,3 +1445,19 @@ window.addEventListener('load', async () => {
   // Fallback → Nickname abfragen
   showNicknameModal();
 });
+
+function exportMindmapAsSVG(svgElement) {
+  const serializer = new XMLSerializer();
+  const source = serializer.serializeToString(svgElement);
+  const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "mindmap.svg";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
