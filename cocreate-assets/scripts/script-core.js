@@ -13,6 +13,26 @@ let initialSyncDone = false;
 let dragLine = null;
 let svg = null;
 
+async function saveSVGToSupabase() {
+  console.log("adding to supabase");
+  const svgData = getSVGSource();
+  const { data, error } = await supabase
+    .from('creations')
+    .update({ svg_code: svgData })
+    .eq('creationid', mindmapId);
+     
+  if (error) {
+    console.error('Fehler beim Speichern des SVGs:', error.message);
+    // Optional: Fehler weiter werfen oder anderweitig behandeln
+    throw new Error('Speichern des SVGs in Supabase fehlgeschlagen: ' + error.message);
+  }
+
+  console.log("added to supabase :)))")
+  return data; // Optional: Rückgabe der aktualisierten Daten
+}
+
+
+
 function updateConnections(movedId) {
   allConnections.forEach(conn => {
     if (conn.fromId === movedId || conn.toId === movedId) {
@@ -482,13 +502,6 @@ function createUUID() {
   });
 }
 
-async function saveSVGToSupabase() {
-  const svgData = getSVGSource();
-  await supabase
-    .from('creations')
-    .update({ svg_code: svgData })
-    .eq('creationid', mindmapId);
-}
 
 
 // saving mindmaps
