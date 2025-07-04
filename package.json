@@ -7,11 +7,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite --port 1235",
-    "dev:all": "concurrently \"npx y-websocket --port 1234 --host 0.0.0.0\" \"vite --port 1235\"",
-    "start": "serve -s dist -l 1235",
     "build": "vite build",
     "preview": "vite preview",
-    "start:ws": "npx y-websocket --port 1234 --host 0.0.0.0"
+    "start": "run-p server serve",
+    "serve": "serve -s dist -l 1235",
+    "server": "node server.js"
   },
   "repository": {
     "type": "git",
