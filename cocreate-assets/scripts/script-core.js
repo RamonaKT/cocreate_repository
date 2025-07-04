@@ -256,9 +256,9 @@ function createDraggableNode(x, y, type, idOverride, fromNetwork = false) {
   const style = nodeStyles[type];
   if (!style) return;
 
-  //const id = 'node' + allNodes.length;
-const id = idOverride || 'node' + createUUID();
-console.log('randomUUID exists?', !!window.crypto?.randomUUID);
+    //const id = 'node' + allNodes.length;
+  const id = idOverride || 'node' + createUUID();
+  console.log('randomUUID exists?', !!window.crypto?.randomUUID);
 
 
 
