@@ -102,13 +102,6 @@ document.querySelectorAll('.node-template').forEach(el => {
   });
 });
 
-// Browser-Koordinaten -> SVG-Koordinaten
-function getSVGPoint(x, y) {
-  const pt = svg.createSVGPoint();
-  pt.x = x;
-  pt.y = y;
-  return pt.matrixTransform(svg.getScreenCTM().inverse());
-}
 
 window.addEventListener('load', async () => {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
