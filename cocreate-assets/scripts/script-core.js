@@ -14,7 +14,6 @@ let dragLine = null;
 let svg = null;
 
 
-
 function updateConnections(movedId) {
   allConnections.forEach(conn => {
     if (conn.fromId === movedId || conn.toId === movedId) {
@@ -460,7 +459,17 @@ const provider = new WebsocketProvider('ws://localhost:1234', mindmapId, ydoc);*
 const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:1234';
 
 const ydoc = new Y.Doc();
-const provider = new WebsocketProvider(wsUrl, mindmapId, ydoc);
+
+if (mindmapId) {
+  // Wenn eine Mindmap-ID vorhanden ist → mit dem Yjs-Server verbinden
+  const wsUrl = import.meta.env.VITE_WS_URL || 'ws://141.72.13.151:1234';
+  const provider = new WebsocketProvider(wsUrl, mindmapId, ydoc);
+} else {
+  // Kein mindmapId vorhanden = Startseite
+  console.log("Kein Mindmap-Raum aktiv – nur Startseite angezeigt.");
+  // Optional: Zeige Interface zum Erstellen/Öffnen einer Map
+}
+
 
 function createUUID() {
   if (window.crypto?.randomUUID) {
@@ -505,7 +514,7 @@ export async function saveCurrentMindmap() {
     const id = result[0]?.creationid;
     if (id) {
       alert("Erfolgreich gespeichert! Du wirst weitergeleitet...");
-      const link = `${location.origin}/index.html?id=${id}`;
+      const link = `${location.origin}/?id=${id}`;
       window.location.href = link;
       console.log(link);
     } else {

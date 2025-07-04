@@ -19,6 +19,7 @@ COPY start-dev.sh .
 RUN chmod +x start-dev.sh
 
 # 7. Ports freigeben
+
 EXPOSE 1234
 EXPOSE 1235
 
