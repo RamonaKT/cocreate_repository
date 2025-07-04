@@ -385,6 +385,8 @@ async function initializeAccessControl(shadowRoot) {
     console.error("Fehler bei Login über IP:", err);
   }
 
+  loadUsersForCurrentMindmap(shadowRoot);
+
   showNicknameModal();
 }
 
@@ -570,32 +572,6 @@ let viewBox = {
 
 // Pan mit WASD/Pfeiltasten (verschiebt ViewBox um festen Schritt)
 const panStep = 20;
-document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-
-  switch (e.key.toLowerCase()) {
-    case 'w':
-    case 'arrowup':
-      viewBox.y -= panStep * (viewBox.h / initialViewBoxSize);
-      updateViewBox();
-      break;
-    case 's':
-    case 'arrowdown':
-      viewBox.y += panStep * (viewBox.h / initialViewBoxSize);
-      updateViewBox();
-      break;
-    case 'a':
-    case 'arrowleft':
-      viewBox.x -= panStep * (viewBox.w / initialViewBoxSize);
-      updateViewBox();
-      break;
-    case 'd':
-    case 'arrowright':
-      viewBox.x += panStep * (viewBox.w / initialViewBoxSize);
-      updateViewBox();
-      break;
-  }
-});
 
 
 /*
@@ -1143,6 +1119,9 @@ async function loadMindmapFromDB(id) {
 
 
 export function setupMindmap(shadowRoot) {
+  shadowRoot.host.tabIndex = 0; // macht den Host "fokusierbar"
+shadowRoot.host.focus();      // setzt direkt den Fokus
+
   svg = shadowRoot.getElementById('mindmap');
   if (!svg) {
     console.error("SVG nicht im Shadow DOM gefunden!");
@@ -1226,6 +1205,32 @@ if (dragLine) {
     });
   }
 
+shadowRoot.host.addEventListener("keydown", (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+  switch (e.key.toLowerCase()) {
+    case 'w':
+    case 'arrowup':
+      viewBox.y -= panStep * (viewBox.h / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 's':
+    case 'arrowdown':
+      viewBox.y += panStep * (viewBox.h / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 'a':
+    case 'arrowleft':
+      viewBox.x -= panStep * (viewBox.w / initialViewBoxSize);
+      updateViewBox();
+      break;
+    case 'd':
+    case 'arrowright':
+      viewBox.x += panStep * (viewBox.w / initialViewBoxSize);
+      updateViewBox();
+      break;
+  }
+});
 
   
 
