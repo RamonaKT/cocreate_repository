@@ -64,17 +64,10 @@ function connectNodes(fromId, toId, fromNetwork = false) {
 
   svg.insertBefore(line, svg.firstChild);
   allConnections.push({ fromId, toId, line });
-  if (!fromNetwork) {
-    yConnections.push([{ fromId, toId }]);
-  }
+
 }
 
-function deleteConnection(fromId, toId) {
-  const current = yConnections.toArray();
-  const updated = current.filter(conn => !(conn.fromId === fromId && conn.toId === toId));
-  yConnections.delete(0, yConnections.length);
-  yConnections.push(updated);
-}
+
 
 function highlightNode(id, on) {
   const node = allNodes.find(n => n.id === id);
@@ -385,6 +378,98 @@ if (mindmapId) {
 
 }
 
+
+//socket:
+
+const socket = io("http://localhost:3000"); // Verbindung zum Server 
+const userId = `${Date.now()}-${Math.random()}`;
+socket.emit("join-map", { mapId: mindmapId, userId });
+socket.on("initial-sync", ({ nodes, users }) => {
+  nodes.forEach(data => {
+    const node = allNodes.find(n => n.id === data.id);
+    if (node) {
+      node.x = data.x;
+      node.y = data.y;
+      node.group.setAttribute("transform", `translate(${data.x},${data.y})`);
+    }
+  });
+});
+
+socket.on("node-moving", data => {
+  console.log("📡 node-moving empfangen", data);
+  const node = allNodes.find(n => n.id === data.id);
+  if (node) {
+    node.x = data.x;
+    node.y = data.y;
+    node.group.setAttribute("transform", `translate(${data.x}, ${data.y})`);
+    updateConnections(data.id);
+  }
+});
+
+
+socket.on("node-moved", data => {
+  const node = allNodes.find(n => n.id === data.id);
+  if (node) {
+    node.x = data.x;
+    node.y = data.y;
+    node.group.setAttribute("transform", `translate(${data.x},${data.y})`);
+    updateConnections(data.id);
+  }
+});
+
+socket.on("node-added", data => {
+  if (!allNodes.find(n => n.id === data.id)) {
+    createDraggableNode(data.x, data.y, data.type, data.id, true);
+  }
+});
+socket.on("node-deleted", ({ id }) => {
+  const nodeIndex = allNodes.findIndex(n => n.id === id);
+  if (nodeIndex === -1) return;
+  const node = allNodes[nodeIndex];
+  if (svg.contains(node.group)) {
+    svg.removeChild(node.group);
+  }
+  allNodes.splice(nodeIndex, 1);
+  // Verbindungen entfernen
+  allConnections = allConnections.filter(conn => {
+    if (conn.fromId === id || conn.toId === id) {
+      if (svg.contains(conn.line)) {
+        svg.removeChild(conn.line);
+      }
+      return false;
+    }
+    return true;
+  });
+});
+socket.on("connection-added", ({ fromId, toId }) => {
+  // Duplikate verhindern
+  if (allConnections.some(conn => conn.fromId === fromId && conn.toId === toId)) return;
+  connectNodes(fromId, toId);
+});
+socket.on("connection-deleted", ({ fromId, toId }) => {
+  const connIndex = allConnections.findIndex(conn => conn.fromId === fromId && conn.toId === toId);
+  if (connIndex !== -1) {
+    const conn = allConnections[connIndex];
+    svg.removeChild(conn.line);
+    allConnections.splice(connIndex, 1);
+  }
+});
+socket.on("node-renamed", ({ id, text }) => {
+  const node = allNodes.find(n => n.id === id);
+  if (node) {
+    const textEl = node.group.querySelector("text");
+    if (textEl) {
+      textEl.textContent = text;
+    }
+  }
+});
+
+socket.on("kicked", () => {
+  alert("Du wurdest vom Admin entfernt.");
+  window.location.href = "/";
+});
+
+
 function createUUID() {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -397,11 +482,13 @@ function createUUID() {
   });
 }
 
-
-
-
-
-
+async function saveSVGToSupabase() {
+  const svgData = getSVGSource();
+  await supabase
+    .from('creations')
+    .update({ svg_code: svgData })
+    .eq('creationid', mindmapId);
+}
 
 
 // saving mindmaps
@@ -738,6 +825,7 @@ async function lockUserByNickname(nickname) {
 window.loadUsersForCurrentMindmap = loadUsersForCurrentMindmap;
 
 
+
 async function loadMindmapFromDB(id) {
   const { data, error } = await supabase
     .from('creations')
@@ -799,51 +887,12 @@ async function loadMindmapFromDB(id) {
         }
         const fromId = line.dataset.from;
         const toId = line.dataset.to;
-        /*  const index = yConnections.toArray().findIndex(conn => conn.fromId === fromId && conn.toId === toId);
-          if (index !== -1) {
-            // ✅ Direkt aus toArray holen (unverändert!)
-            const deletedConnection = yConnections.toArray()[index];
-            console.log('🗑️ Lösche Verbindung:', { fromId, toId });
-            console.log(' Vorherige array:', yConnections.toArray());
-            yConnections.delete(index, 1);
-            console.log(' Nachher:', yConnections.toArray());
-  
-  
-            // Jetzt kannst du sicher mit deletedConnection arbeiten
-            const conn = allConnections.find(c => c.fromId === deletedConnection.fromId && c.toId === deletedConnection.toId);
-            if (conn) {
-              svg.removeChild(conn.line);
-              allConnections = allConnections.filter(c => c !== conn);
-            }
-          }*/
-        /*   for (let i = 0; i < yConnections.length; i++) {
-             const conn = yConnections.get(i);
-             if (conn.fromId === fromId && conn.toId === toId) {
-               yConnections.delete(i, 1);
-               break;
-             }
-               
-           }*/
-        deleteConnection(fromId, toId);
+
+
         if (selectedConnection === line) selectedConnection = null;
       });
-      // Gibt es die Verbindung schon in yConnections?
-      /* const alreadyExists = yConnections.toArray().some(conn =>
-         conn.fromId === fromId && conn.toId === toId
-       );*/
-      if (!initialSyncDone) {
-        const alreadyExists = yConnections.toArray().some(conn =>
-          conn.fromId === fromId && conn.toId === toId
-        );
-        if (!alreadyExists) {
-          yConnections.push([{ fromId, toId }]);
-          console.log('⏳ Alte Verbindung in YJS eingetragen:', fromId, '→', toId);
-        }
-      }
-      /* if (!alreadyExists) {
-         yConnections.push([{ fromId, toId }]);
-         console.log('⏳ Alte Verbindung in YJS eingetragen:', fromId, '→', toId);
-       }*/
+
+
       allConnections.push({ fromId, toId, line });
     }
   });
@@ -1153,3 +1202,16 @@ function exportMindmapAsSVG(svgElement) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+
+
+socket.on("user-joined", ({ userId, isAdmin }) => {
+  // aktualisiere UI
+});
+socket.on("user-kicked", ({ userId }) => {
+  // entferne aus UI
+});
+socket.on("user-left", ({ userId }) => {
+  // entferne aus UI
+});
+
