@@ -96,7 +96,6 @@ export function highlightNode(id, on) {
 }
 
 
-
 export function addEventListenersToNode(group, id, r) {
   const node = allNodes.find(n => n.id === id);
   if (!node) return;

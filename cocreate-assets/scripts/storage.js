@@ -31,7 +31,7 @@ export async function saveCurrentMindmap() {
   }
 }
 
-function exportMindmapAsSVG(svgElement) {
+export function exportMindmapAsSVG(svgElement) {
   const serializer = new XMLSerializer();
   const source = serializer.serializeToString(svgElement);
   const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
