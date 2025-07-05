@@ -402,7 +402,7 @@ if (mindmapId) {
 //socket:
 
 //const socket = io("http://localhost:3000"); 
-const socket = import.meta.env.VITE_SOCKET_URL || 'ws://localhost:3000';
+const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000');
 const userId = `${Date.now()}-${Math.random()}`;
 socket.emit("join-map", { mapId: mindmapId, userId });
 socket.on("initial-sync", ({ nodes, users }) => {
