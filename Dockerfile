@@ -1,27 +1,23 @@
-# 1. Basis-Image
+# Basis-Image
 FROM node:20-alpine
 
-# 2. Arbeitsverzeichnis setzen
+# Arbeitsverzeichnis
 WORKDIR /app
 
-# 3. package.json und lock zuerst kopieren und installieren
+# Package-Dateien kopieren
 COPY package*.json ./
 RUN npm install
 
-# 4. Restliche Projektdateien kopieren
+# Projektdateien kopieren
 COPY . .
 
-# 5. Build der Anwendung
+# App bauen (damit "dist" verfügbar ist)
 RUN npm run build
 
-# 6. start-dev.sh kopieren und ausführbar machen
-COPY start-dev.sh .
-RUN chmod +x start-dev.sh
-
-# 7. Ports freigeben
-
-EXPOSE 1234
+# Portfreigabe: Vite Preview oder Serve (Frontend) + Socket.IO Server
 EXPOSE 1235
+EXPOSE 3000
 
-# 8. Startbefehl
-CMD ["./start-dev.sh"]
+# Startet Server + Static Hosting
+CMD ["npm", "start"]
+
