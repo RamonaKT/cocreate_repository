@@ -3,8 +3,16 @@ let allConnections = [];
 let selectedNode = null;
 let selectedConnection = null;
 
-export { allNodes, allConnections, selectedNode, selectedConnection };
 
+import { socket } from './realtime-sync.js';
+import {
+  getSVGSource,
+  exportMindmapAsSVG,
+  exportMindmapToPDF,
+  saveCurrentMindmap,
+  scheduleSVGSave,
+  saveSVGToSupabase
+} from './storage.js';
 
 export function updateConnections(movedId) {
   allConnections.forEach(conn => {
@@ -23,7 +31,6 @@ export function connectNodes(fromId, toId, fromNetwork = false) {
   const from = allNodes.find(n => n.id === fromId);
   const to = allNodes.find(n => n.id === toId);
   if (!from || !to) return;
-
   const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
   line.setAttribute("x1", from.x);
   line.setAttribute("y1", from.y);
@@ -31,16 +38,12 @@ export function connectNodes(fromId, toId, fromNetwork = false) {
   line.setAttribute("y2", to.y);
   line.dataset.from = fromId;
   line.dataset.to = toId;
-
   line.setAttribute("stroke", "#888");
   line.setAttribute("stroke-width", "3");
   line.setAttribute("class", "connection-line");
-
   svg.appendChild(line);
-
   line.addEventListener("click", e => {
     e.stopPropagation();
-
     if (selectedNode !== null) {
       highlightNode(selectedNode, false);
       selectedNode = null;
@@ -48,33 +51,25 @@ export function connectNodes(fromId, toId, fromNetwork = false) {
     if (selectedConnection) {
       selectedConnection.classList.remove("highlighted");
     }
-
     selectedConnection = line;
     selectedConnection.classList.add("highlighted");
   });
-
   line.addEventListener("contextmenu", e => {
     e.preventDefault();
-
-    const fromId = line.dataset.from;
-    const toId = line.dataset.to;
-
-    deleteConnection(fromId, toId);
-
-
-
+    svg.removeChild(line);
+    allConnections = allConnections.filter(conn => conn.line !== line);
     if (selectedConnection === line) selectedConnection = null;
+    socket.emit("connection-deleted", {
+      fromId: line.dataset.from,
+      toId: line.dataset.to
+    });
+    scheduleSVGSave();
   });
-
-
   svg.insertBefore(line, svg.firstChild);
   allConnections.push({ fromId, toId, line });
-
-  if (!fromNetwork) {
-    yConnections.push([{ fromId, toId }]);
-  }
-
-}  
+  socket.emit("connection-added", { fromId, toId });
+  scheduleSVGSave();
+}
       
 export function deleteConnection(fromId, toId) {
   const current = yConnections.toArray();
@@ -215,15 +210,14 @@ export function addEventListenersToNode(group, id, r) {
     });
   });
 }
-   
+
+
 export function createDraggableNode(x, y, type, idOverride, fromNetwork = false) {
   const style = nodeStyles[type];
   if (!style) return;
-
-    //const id = 'node' + allNodes.length;
+  //const id = 'node' + allNodes.length;
   const id = idOverride || 'node' + createUUID();
   console.log('randomUUID exists?', !!window.crypto?.randomUUID);
-
 
 
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -231,9 +225,7 @@ export function createDraggableNode(x, y, type, idOverride, fromNetwork = false)
   group.setAttribute("transform", `translate(${x}, ${y})`);
   group.dataset.nodeId = id;
   svg.appendChild(group);
-
   let shape;
-
   if (type === "1") {
     // Oval (Ellipse)
     shape = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
@@ -260,10 +252,8 @@ export function createDraggableNode(x, y, type, idOverride, fromNetwork = false)
     shape.setAttribute("rx", 0);
     shape.setAttribute("ry", 0);
   }
-
   shape.setAttribute("fill", style.color);
   group.appendChild(shape);
-
 
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
   text.setAttribute("x", 0);
@@ -276,13 +266,13 @@ export function createDraggableNode(x, y, type, idOverride, fromNetwork = false)
   group.appendChild(text);
 
 
-
   allNodes.push({ id, group, x, y, r: style.r });
 
   addEventListenersToNode(group, id, style.r);
-
   if (!fromNetwork) {
-    yNodes.set(id, { x, y, type, label: "...", id });
+    socket.emit("node-added", { id, x, y, type });
   }
-
+  scheduleSVGSave();
 }
+
+export { allNodes, allConnections, selectedNode, selectedConnection };

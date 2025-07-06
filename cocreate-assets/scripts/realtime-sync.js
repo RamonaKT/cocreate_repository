@@ -1,56 +1,106 @@
-// realtime-sync.js
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
-import { connectNodes } from './nodes.js';
 
-let ydoc, yNodes, yConnections, provider, priorConnections = [];
+let socket;
+let allNodesRef = [];
+let allConnectionsRef = [];
+let svgRef;
 
-export function initYjs(mindmapId, wsUrl = 'ws://localhost:1234') {
-  ydoc = new Y.Doc();
-  yNodes = ydoc.getMap('nodes');
-  yConnections = ydoc.getArray('connections');
-  provider = new WebsocketProvider(wsUrl, mindmapId, ydoc);
-  priorConnections = yConnections.toArray();
-}
+export function initRealtimeSync(mapId, nodes, connections, svg) {
+  const userId = `${Date.now()}-${Math.random()}`;
+  socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000');
+  socket.emit("join-map", { mapId, userId });
 
-export function observeYjs(allNodes, allConnections, svg) {
-  yNodes.observe(event => {
-    event.changes.keys.forEach((change, key) => {
-      // create, update, delete nodes
-      // identisch mit deinem bisherigen Code
+  allNodesRef = nodes;
+  allConnectionsRef = connections;
+  svgRef = svg;
+  
+    socket.emit("join-map", { mapId: mindmapId, userId });
+    socket.on("initial-sync", ({ nodes, users }) => {
+    nodes.forEach(data => {
+        const node = allNodes.find(n => n.id === data.id);
+        if (node) {
+        node.x = data.x;
+        node.y = data.y;
+        node.group.setAttribute("transform", `translate(${data.x},${data.y})`);
+        }
     });
-  });
-
-  yConnections.observe(event => {
-    const current = yConnections.toArray();
-    const added = current.filter(
-      newConn => !priorConnections.some(
-        oldConn => oldConn.fromId === newConn.fromId && oldConn.toId === newConn.toId
-      )
-    );
-
-    const removed = priorConnections.filter(
-      oldConn => !current.some(
-        newConn => newConn.fromId === oldConn.fromId && newConn.toId === oldConn.toId
-      )
-    );
-
-    added.forEach(({ fromId, toId }) => {
-      const exists = allConnections.some(c => c.fromId === fromId && c.toId === toId);
-      if (!exists) {
-        connectNodes(fromId, toId, svg, yConnections, true);
-      }
     });
 
-    removed.forEach(({ fromId, toId }) => {
-      const conn = allConnections.find(c => c.fromId === fromId && c.toId === toId);
-      if (conn && svg.contains(conn.line)) {
+    socket.on("node-moving", data => {
+    console.log("📡 node-moving empfangen", data);
+    const node = allNodes.find(n => n.id === data.id);
+    if (node) {
+        node.x = data.x;
+        node.y = data.y;
+        node.group.setAttribute("transform", `translate(${data.x}, ${data.y})`);
+        updateConnections(data.id);
+    }
+    });
+
+
+    socket.on("node-moved", data => {
+    const node = allNodes.find(n => n.id === data.id);
+    if (node) {
+        node.x = data.x;
+        node.y = data.y;
+        node.group.setAttribute("transform", `translate(${data.x},${data.y})`);
+        updateConnections(data.id);
+    }
+    });
+
+    socket.on("node-added", data => {
+    if (!allNodes.find(n => n.id === data.id)) {
+        createDraggableNode(data.x, data.y, data.type, data.id, true);
+    }
+    });
+    socket.on("node-deleted", ({ id }) => {
+    const nodeIndex = allNodes.findIndex(n => n.id === id);
+    if (nodeIndex === -1) return;
+    const node = allNodes[nodeIndex];
+    if (svg.contains(node.group)) {
+        svg.removeChild(node.group);
+    }
+    allNodes.splice(nodeIndex, 1);
+    // Verbindungen entfernen
+    allConnections = allConnections.filter(conn => {
+        if (conn.fromId === id || conn.toId === id) {
+        if (svg.contains(conn.line)) {
+            svg.removeChild(conn.line);
+        }
+        return false;
+        }
+        return true;
+    });
+    });
+    socket.on("connection-added", ({ fromId, toId }) => {
+    // Duplikate verhindern
+    if (allConnections.some(conn => conn.fromId === fromId && conn.toId === toId)) return;
+    connectNodes(fromId, toId);
+    });
+    socket.on("connection-deleted", ({ fromId, toId }) => {
+    const connIndex = allConnections.findIndex(conn => conn.fromId === fromId && conn.toId === toId);
+    if (connIndex !== -1) {
+        const conn = allConnections[connIndex];
         svg.removeChild(conn.line);
-      }
+        allConnections.splice(connIndex, 1);
+    }
+    });
+    socket.on("node-renamed", ({ id, text }) => {
+    const node = allNodes.find(n => n.id === id);
+    if (node) {
+        const textEl = node.group.querySelector("text");
+        if (textEl) {
+        textEl.textContent = text;
+        }
+    }
     });
 
-    priorConnections = current.map(c => ({ ...c }));
-  });
+    socket.on("kicked", () => {
+    alert("Du wurdest vom Admin entfernt.");
+    window.location.href = "/";
+    });
 }
 
-export { ydoc, yNodes, yConnections };
+
+export { socket };
+export let allNodes = [];
+export let allConnections = [];

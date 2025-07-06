@@ -1,3 +1,7 @@
+// ----------- NEU ANFANG -------------- //
+let saveTimeout;
+import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
+// ----------- NEU ENDE -------------- //
 
 export function getSVGSource() {
   const serializer = new XMLSerializer();
@@ -61,3 +65,30 @@ export async function exportMindmapToPDF() {
 
   pdf.save("mindmap.pdf");
 }
+
+// ----------- NEU ANFANG -------------- //
+export function scheduleSVGSave(delay = 1000) {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    saveSVGToSupabase();
+  }, delay);
+}
+
+export async function saveSVGToSupabase() {
+  console.log("adding to supabase");
+  const svgData = getSVGSource();
+  const { data, error } = await supabase
+    .from('creations')
+    .update({ svg_code: svgData })
+    .eq('creationid', mindmapId);
+
+  if (error) {
+    console.error('Fehler beim Speichern des SVGs:', error.message);
+    // Optional: Fehler weiter werfen oder anderweitig behandeln
+    throw new Error('Speichern des SVGs in Supabase fehlgeschlagen: ' + error.message);
+  }
+
+  console.log("added to supabase :)))")
+  return data; // Optional: Rückgabe der aktualisierten Daten
+}
+// ----------- NEU ENDE -------------- //

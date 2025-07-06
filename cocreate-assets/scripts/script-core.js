@@ -1,10 +1,13 @@
 import { supabase } from '../../supabase/client.js';
 import { getCreations, saveCreation } from '../../supabase/database.js';  // Pfad anpassen
+// ----------- NEU ANFANG -------------- //
+import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
+// ----------- NEU ENDE -------------- //
 import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { initYjs, observeYjs, yNodes, yConnections } from './realtime-sync.js';
+import { socket } from './realtime-sync.js';
 import {
   enableToolbarDrag,
   enableSvgDrop
@@ -29,9 +32,10 @@ import {
   getSVGSource,
   exportMindmapAsSVG,
   exportMindmapToPDF,
-  saveCurrentMindmap
+  saveCurrentMindmap,
+  scheduleSVGSave,
+  saveSVGToSupabase
 } from './storage.js';
-
 import {
   allNodes,
   allConnections,
@@ -76,6 +80,7 @@ let viewBox = {
   w: initialViewBoxSize,
   h: initialViewBoxSize,
 };
+let selectedConnection = null;
 
 
 window.submitNickname = submitNickname;
@@ -174,101 +179,83 @@ window.addEventListener('load', async () => {
 });
 
 async function loadMindmapFromDB(id) {
-    const { data, error } = await supabase
-      .from('creations')
-      .select('svg_code, title, admin_ip')
-      .eq('creationid', id)
-      .single();
+  const { data, error } = await supabase
+    .from('creations')
+    .select('svg_code, title, admin_ip')
+    .eq('creationid', id)
+    .single();
+  if (error || !data) {
+    alert("Mindmap nicht gefunden.");
+    return;
+  }
+  const parser = new DOMParser();
+  const svgDoc = parser.parseFromString(data.svg_code, "image/svg+xml");
+  const loadedSVG = svgDoc.documentElement;
 
-    if (error || !data) {
-      alert("Mindmap nicht gefunden.");
-      return;
+  svg.innerHTML = loadedSVG.innerHTML; // Inhalte übernehmen
+  svg.setAttribute("viewBox", loadedSVG.getAttribute("viewBox") || "0 0 1000 600");
+  // Initialisiere geladene Knoten
+  svg.querySelectorAll('g.draggable').forEach(group => {
+    const id = group.dataset.nodeId || 'node' + allNodes.length;
+    const transform = group.getAttribute("transform");
+    const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    const x = parseFloat(match?.[1] || 0);
+    const y = parseFloat(match?.[2] || 0);
+    const shape = group.querySelector('ellipse, rect');
+    const r = shape?.getAttribute('rx') || shape?.getAttribute('r') || 40;
+
+
+
+    allNodes.push({ id, group, x, y, r: parseFloat(r) });
+    // EventListener hinzufügen wie in createDraggableNode()
+    addEventListenersToNode(group, id, parseFloat(r));
+  });
+
+
+
+
+  svg.querySelectorAll('line.connection-line').forEach(line => {
+    const fromId = line.dataset.from;
+    const toId = line.dataset.to;
+    if (fromId && toId) {
+      // Event-Handling hinzufügen
+      line.addEventListener("click", e => {
+        e.stopPropagation();
+        if (selectedNode !== null) {
+          highlightNode(selectedNode, false);
+          selectedNode = null;
+        }
+        if (selectedConnection) {
+          selectedConnection.classList.remove("highlighted");
+        }
+        selectedConnection = line;
+        selectedConnection.classList.add("highlighted");
+      });
+
+      line.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        if (svg.contains(line)) {
+          svg.removeChild(line);
+        }
+        // ----------- NEU ANFANG -------------- //
+        socket.emit("connection-deleted", {
+          fromId: line.dataset.from,
+          toId: line.dataset.to
+        });
+        scheduleSVGSave();
+        // ----------- NEU ENDE -------------- //
+
+        allConnections = allConnections.filter(conn => conn.line !== line);
+        if (selectedConnection === line) selectedConnection = null;
+      })
+      allConnections.push({ fromId, toId, line });
+
+      // ----------- NEU ANFANG -------------- //
+      socket.emit("connection-added", { fromId, toId });
+      scheduleSVGSave();
+      // ----------- NEU ENDE -------------- //
     }
-
-    const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(data.svg_code, "image/svg+xml");
-    const loadedSVG = svgDoc.documentElement;
-
-
-    svg.innerHTML = loadedSVG.innerHTML; // Inhalte übernehmen
-
-    svg.setAttribute("viewBox", loadedSVG.getAttribute("viewBox") || "0 0 1000 600");
-
-    // Initialisiere geladene Knoten
-    svg.querySelectorAll('g.draggable').forEach(group => {
-      const id = group.dataset.nodeId || 'node' + allNodes.length;
-
-      const transform = group.getAttribute("transform");
-      const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-      const x = parseFloat(match?.[1] || 0);
-      const y = parseFloat(match?.[2] || 0);
-
-      const shape = group.querySelector('ellipse, rect');
-      const r = shape?.getAttribute('rx') || shape?.getAttribute('r') || 40;
-
-      const text = group.querySelector('text');
-      if (text) {
-        const node = allNodes.find(n => n.id === id);
-        const yNodeData = yNodes.get(id);
-        if (yNodeData?.label) {
-          text.textContent = yNodeData.label;
-        }
-      }
-
-      allNodes.push({ id, group, x, y, r: parseFloat(r) });
-
-      // EventListener hinzufügen wie in createDraggableNode()
-      addEventListenersToNode(group, id, parseFloat(r));
-    });
-
-    svg.querySelectorAll('line.connection-line').forEach(line => {
-      const fromId = line.dataset.from;
-      const toId = line.dataset.to;
-      if (fromId && toId) {
-        // Event-Handling hinzufügen
-        line.addEventListener("click", e => {
-          e.stopPropagation();
-
-          if (selectedNode !== null) {
-            highlightNode(selectedNode, false);
-            selectedNode = null;
-          }
-          if (selectedConnection) {
-            selectedConnection.classList.remove("highlighted");
-          }
-
-          selectedConnection = line;
-          selectedConnection.classList.add("highlighted");
-        });
-
-        line.addEventListener("contextmenu", e => {
-          e.preventDefault();
-          if (svg.contains(line)) {
-            svg.removeChild(line);
-          }
-
-          const fromId = line.dataset.from;
-          const toId = line.dataset.to;
-    
-          deleteConnection(fromId, toId);
-          if (selectedConnection === line) selectedConnection = null;
-        });
-
-        if (!initialSyncDone) {
-        const alreadyExists = yConnections.toArray().some(conn =>
-          conn.fromId === fromId && conn.toId === toId
-        );
-        if (!alreadyExists) {
-          yConnections.push([{ fromId, toId }]);
-          console.log('⏳ Alte Verbindung in YJS eingetragen:', fromId, '→', toId);
-        }
-      }
-
-        allConnections.push({ fromId, toId, line });
-
-      }
-    });
-
+  });
 }
 
 export function setupMindmap(shadowRoot) {
@@ -314,20 +301,25 @@ export function setupMindmap(shadowRoot) {
   });
 
   // Drag von Knoten
-  svg.addEventListener("pointermove", e => {
+  svg.addEventListener('pointermove', e => {
     if (!dragTarget) return;
-    const point = getSVGPoint(svg, e.clientX, e.clientY);
+    const point = getSVGPoint(e.clientX, e.clientY);
     const id = dragTarget.dataset.nodeId;
     const node = allNodes.find(n => n.id === id);
     if (!node) return;
-
     const newX = point.x - offset.x;
     const newY = point.y - offset.y;
     dragTarget.setAttribute("transform", `translate(${newX}, ${newY})`);
     node.x = newX;
     node.y = newY;
-
-    yNodes.set(id, { ...yNodes.get(id), x: newX, y: newY });
+    // ----------- NEU ANFANG -------------- //
+    socket.emit("node-moving", {
+      id: node.id,
+      x: node.x,
+      y: node.y,
+    });
+    // ----------- NEU ENDE -------------- //
+    console.log(" node-moving gesendet", node.id, node.x, node.y);
     updateConnections(id);
   });
 
@@ -344,31 +336,62 @@ export function setupMindmap(shadowRoot) {
   });
 
   // Löschen mit Delete-Taste
-  document.addEventListener("keydown", (e) => {
-    const isTextInput = ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
-    if (isTextInput) return;
+  document.addEventListener('keydown', (e) => {
 
-    if (["Delete", "Backspace"].includes(e.key)) {
+    const activeElement = document.activeElement;
+    const isInputFocused = (
+      activeElement &&
+      (
+        activeElement.tagName === "INPUT" ||
+        activeElement.tagName === "TEXTAREA" ||
+        activeElement.isContentEditable ||
+        activeElement.closest("foreignObject") // ← Wichtig für deine SVG-Inputs!
+      )
+    );
+
+    if (isInputFocused) {
+      return;
+    }
+
+    if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
-
       if (selectedConnection) {
+
         const fromId = selectedConnection.dataset.from;
         const toId = selectedConnection.dataset.to;
-        deleteConnection(fromId, toId);
+
+        if (svg.contains(selectedConnection)) {
+          svg.removeChild(selectedConnection);
+        }
+
+        allConnections = allConnections.filter(conn =>
+          conn.line !== selectedConnection
+        );
         selectedConnection = null;
+        // ----------- NEU ANFANG -------------- //
+        socket.emit("connection-deleted", {
+          fromId,
+          toId
+        });
+        scheduleSVGSave();
+        // ----------- NEU ENDE -------------- //
         return;
       }
+
 
       if (selectedNode) {
         const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
         if (nodeIndex === -1) return;
         const node = allNodes[nodeIndex];
-
         svg.removeChild(node.group);
         allNodes.splice(nodeIndex, 1);
-        yNodes.delete(selectedNode);
 
-        // Zugehörige Verbindungen löschen
+        // ----------- NEU ANFANG -------------- //
+        socket.emit("node-deleted", { id: selectedNode });
+        scheduleSVGSave();
+        // ----------- NEU ENDE -------------- //
+
+        // Verbindungen mit dem Knoten entfernen
         allConnections = allConnections.filter(conn => {
           if (conn.fromId === selectedNode || conn.toId === selectedNode) {
             svg.removeChild(conn.line);
@@ -376,7 +399,6 @@ export function setupMindmap(shadowRoot) {
           }
           return true;
         });
-
         selectedNode = null;
       }
     }
@@ -420,69 +442,14 @@ export function setupMindmap(shadowRoot) {
 }
 
 
-window.addEventListener('load', async () => {
-  const mindmapId = new URLSearchParams(window.location.search).get('id');
-  if (!mindmapId) return;
-
-  // Modal vorbereiten (erstellen)
-  createNicknameModal();
-
-  let ip = 'unknown';
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const data = await res.json();
-    ip = data.ip;
-  } catch (err) {
-    console.warn("IP konnte nicht ermittelt werden:", err);
-    showNicknameModal();
-    return;
-  }
-
-  // Nickname aus localStorage?
-  const storedNickname = localStorage.getItem("mindmap_nickname");
-
-  if (storedNickname) {
-    try {
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('nickname', storedNickname)
-        .eq('ipadress', ip)
-        .maybeSingle();
-
-      if (!error && user && !user.locked && user.mindmap_id == mindmapId) {
-        userNickname = storedNickname;
-        console.log("Automatisch eingeloggt:", userNickname);
-        document.getElementById('nicknameModal')?.remove();
-        startIpLockWatcher(ip);
-        return;
-      }
-    } catch (e) {
-      console.error("Fehler bei Login mit gespeicherten Nickname:", e);
-    }
-  }
-
-  // Versuch per IP
-  try {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('ipadress', ip)
-      .eq('mindmap_id', mindmapId)
-      .maybeSingle();
-
-    if (!error && user && !user.locked) {
-      userNickname = user.nickname;
-      localStorage.setItem("mindmap_nickname", userNickname);
-      console.log("Automatisch über IP eingeloggt:", userNickname);
-      document.getElementById('nicknameModal')?.remove();
-      startIpLockWatcher(ip);
-      return;
-    }
-  } catch (err) {
-    console.error("Fehler bei Login über IP:", err);
-  }
-
-  // Fallback → Nickname abfragen
-  showNicknameModal();
+// ----------- NEU ANFANG -------------- //
+socket.on("user-joined", ({ userId, isAdmin }) => {
+  // aktualisiere UI
 });
+socket.on("user-kicked", ({ userId }) => {
+  // entferne aus UI
+});
+socket.on("user-left", ({ userId }) => {
+  // entferne aus UI
+});
+// ----------- NEU ENDE -------------- //
