@@ -1,19 +1,20 @@
+import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
 
 let socket;
 let allNodesRef = [];
 let allConnectionsRef = [];
 let svgRef;
 
-export function initRealtimeSync(mapId, nodes, connections, svg) {
+export function initRealtimeSync(mindmapId, nodes, connections, svg) {
   const userId = `${Date.now()}-${Math.random()}`;
   socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000');
-  socket.emit("join-map", { mapId, userId });
+  socket.emit("join-map", { mindmapId, userId });
 
   allNodesRef = nodes;
   allConnectionsRef = connections;
   svgRef = svg;
   
-    socket.emit("join-map", { mapId: mindmapId, userId });
+    socket.emit("join-map", { mindmapId: mindmapId, userId });
     socket.on("initial-sync", ({ nodes, users }) => {
     nodes.forEach(data => {
         const node = allNodes.find(n => n.id === data.id);
