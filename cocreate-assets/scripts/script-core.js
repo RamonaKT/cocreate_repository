@@ -1,24 +1,14 @@
 import { supabase } from '../../supabase/client.js';
-import { getCreations, saveCreation } from '../../supabase/database.js';  // Pfad anpassen
-// ----------- NEU ANFANG -------------- //
-import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
-// ----------- NEU ENDE -------------- //
-import { jsPDF } from 'jspdf';
-import { svg2pdf } from 'svg2pdf.js';
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
 import { socket } from './realtime-sync.js';
 import {
   enableToolbarDrag,
   enableSvgDrop
 } from './dragdrop.js';
-
 import {
   updateViewBox,
   enableKeyboardPan,
   enableScrollZoom
 } from './viewbox.js';
-
 import {
   createNicknameModal,
   showNicknameModal,
@@ -29,35 +19,23 @@ import {
   lockUserByNickname
 } from './nicknames.js';
 import {
-  getSVGSource,
   exportMindmapAsSVG,
   exportMindmapToPDF,
   saveCurrentMindmap,
-  scheduleSVGSave,
-  saveSVGToSupabase
+  scheduleSVGSave
 } from './storage.js';
 import {
   allNodes,
   allConnections,
   selectedNode,
   selectedConnection,
-  createDraggableNode,
   addEventListenersToNode,
   updateConnections,
-  connectNodes,
-  deleteConnection,
   highlightNode
 } from './nodes.js';
 
-
 const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
-const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:1234';
-const initialViewBoxSize = 500;
-const centerX = 250;
-const centerY = 250;
-const panStep = 20; // Pan mit WASD/Pfeiltasten (verschiebt ViewBox um festen Schritt)
-
 const getCSSColor = (level) =>
   getComputedStyle(document.documentElement).getPropertyValue(`--color-level-${level}`).trim();
   const nodeStyles = {
@@ -66,27 +44,16 @@ const getCSSColor = (level) =>
   3: { r: 40, color: getCSSColor(3), label: 'Ebene 3', fontSize: 12 },
 };
 
-let initialSyncDone = false;
-let dragLine = null; 
 let svg = null;
-let draggedType = null;
 let dragTarget = null;
 let offset = { x: 0, y: 0 };
 let userNickname = null;
 let userToLock = null;
-let viewBox = {
-  x: centerX - initialViewBoxSize / 2,
-  y: centerY - initialViewBoxSize / 2,
-  w: initialViewBoxSize,
-  h: initialViewBoxSize,
-};
 let selectedConnection = null;
-
 
 window.submitNickname = submitNickname;
 window.exportMindmapToPDF = exportMindmapToPDF;
 window.loadUsersForCurrentMindmap = loadUsersForCurrentMindmap;
-
 
 function createUUID() {
   if (window.crypto?.randomUUID) {
@@ -107,14 +74,11 @@ document.querySelectorAll('.node-template').forEach(el => {
   });
 });
 
-
 window.addEventListener('load', async () => {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
   if (!mindmapId) return;
-
   // Modal vorbereiten, aber noch nicht zeigen
   createNicknameModal();
-
   let ip = 'unknown';
   try {
     const res = await fetch('https://api.ipify.org?format=json');
@@ -125,13 +89,10 @@ window.addEventListener('load', async () => {
     showNicknameModal();
     return;
   }
-
   // Sofort Sperre prüfen
   startIpLockWatcher(ip);
-
   // Zuerst: nickname aus localStorage versuchen
   const storedNickname = localStorage.getItem("mindmap_nickname");
-
   if (storedNickname) {
     try {
       const { data: user, error } = await supabase
@@ -152,7 +113,6 @@ window.addEventListener('load', async () => {
       console.error("Fehler bei Login mit gespeicherten Nickname:", e);
     }
   }
-
   // Wenn nicht: per IP nach gültigem Nutzer suchen
   try {
     const { data: user, error } = await supabase
@@ -161,7 +121,6 @@ window.addEventListener('load', async () => {
       .eq('ipadress', ip)
       .eq('mindmap_id', mindmapId)
       .maybeSingle();
-
     if (!error && user && !user.locked) {
       userNickname = user.nickname;
       localStorage.setItem("mindmap_nickname", userNickname);
@@ -170,11 +129,9 @@ window.addEventListener('load', async () => {
       startIpLockWatcher(ip);
       return;
     }
-
   } catch (err) {
     console.error("Fehler bei Login über IP:", err);
   }
-
   showNicknameModal();
 });
 
@@ -191,7 +148,6 @@ async function loadMindmapFromDB(id) {
   const parser = new DOMParser();
   const svgDoc = parser.parseFromString(data.svg_code, "image/svg+xml");
   const loadedSVG = svgDoc.documentElement;
-
   svg.innerHTML = loadedSVG.innerHTML; // Inhalte übernehmen
   svg.setAttribute("viewBox", loadedSVG.getAttribute("viewBox") || "0 0 1000 600");
   // Initialisiere geladene Knoten
@@ -203,17 +159,10 @@ async function loadMindmapFromDB(id) {
     const y = parseFloat(match?.[2] || 0);
     const shape = group.querySelector('ellipse, rect');
     const r = shape?.getAttribute('rx') || shape?.getAttribute('r') || 40;
-
-
-
     allNodes.push({ id, group, x, y, r: parseFloat(r) });
     // EventListener hinzufügen wie in createDraggableNode()
     addEventListenersToNode(group, id, parseFloat(r));
   });
-
-
-
-
   svg.querySelectorAll('line.connection-line').forEach(line => {
     const fromId = line.dataset.from;
     const toId = line.dataset.to;
@@ -231,76 +180,122 @@ async function loadMindmapFromDB(id) {
         selectedConnection = line;
         selectedConnection.classList.add("highlighted");
       });
-
       line.addEventListener("contextmenu", e => {
         e.preventDefault();
         if (svg.contains(line)) {
           svg.removeChild(line);
         }
-        // ----------- NEU ANFANG -------------- //
         socket.emit("connection-deleted", {
           fromId: line.dataset.from,
           toId: line.dataset.to
         });
         scheduleSVGSave();
-        // ----------- NEU ENDE -------------- //
-
         allConnections = allConnections.filter(conn => conn.line !== line);
         if (selectedConnection === line) selectedConnection = null;
       })
       allConnections.push({ fromId, toId, line });
-
-      // ----------- NEU ANFANG -------------- //
       socket.emit("connection-added", { fromId, toId });
       scheduleSVGSave();
-      // ----------- NEU ENDE -------------- //
     }
   });
 }
 
 export function setupMindmap(shadowRoot) {
-  // Fokus setzen
-  shadowRoot.host.tabIndex = 0;
-  shadowRoot.host.focus();
-
-  const svg = shadowRoot.getElementById("mindmap");
+  shadowRoot.host.tabIndex = 0; // macht den Host "fokusierbar"
+  shadowRoot.host.focus();      // setzt direkt den Fokus
+  svg = shadowRoot.getElementById('mindmap');
   if (!svg) {
     console.error("SVG nicht im Shadow DOM gefunden!");
     return;
   }
-
-  // Initialisierung der Viewbox-Steuerung
-  enableKeyboardPan(svg);
-  enableScrollZoom(svg);
-  updateViewBox(svg);
-
-  // Initialisierung der Realtime-Synchronisation (Yjs)
-  initYjs(mindmapId);
-  observeYjs(allNodes, allConnections, svg);
-
-  // Drag & Drop Setup
-  enableToolbarDrag(shadowRoot);
-  enableSvgDrop(svg, (shape, x, y) => {
-    const id = generateId();
-    yNodes.set(id, { id, x, y, text: "Neuer Knoten", shape });
+  svg.style.touchAction = 'none';
+  const saveBtn = shadowRoot.getElementById('saveButton');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveCurrentMindmap);
+  }
+  shadowRoot.querySelectorAll('.node-template').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      draggedType = e.target.getAttribute('data-type');
+    });
   });
-
-  // Zoombegrenzung (nur wenn gebraucht)
-  let zoom = 1;
-  const minZoom = 0.1;
-  const maxZoom = 3;
-
-  // DragLine vorbereiten
-  let dragLine = null;
-  svg.addEventListener("pointermove", e => {
+  svg.addEventListener('dragover', e => e.preventDefault());
+  svg.addEventListener('drop', e => {
+    e.preventDefault();
+    const svgPoint = getSVGPoint(e.clientX, e.clientY);
+    createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
+  });
+  svg.addEventListener('pointermove', e => {
     if (dragLine) {
-      const svgPoint = getSVGPoint(svg, e.clientX, e.clientY);
+      const svgPoint = getSVGPoint(e.clientX, e.clientY);
       dragLine.setAttribute("x2", svgPoint.x);
       dragLine.setAttribute("y2", svgPoint.y);
     }
   });
-
-  // Drag von Knoten
+  dragLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  svg.appendChild(dragLine);
+  if (dragLine) {
+    svg.removeChild(dragLine);
+    dragLine = null;
+  }
+  svg.addEventListener('click', () => {
+    if (selectedNode) {
+      highlightNode(selectedNode, false);
+      selectedNode = null;
+    }
+    if (selectedConnection) {
+      selectedConnection.classList.remove('highlighted');
+      selectedConnection = null;
+    }
+  });
+  const confirmBtn = shadowRoot.getElementById('confirmLockBtn');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      if (userToLock) {
+        await lockUserByNickname(userToLock);
+        const messageBox = shadowRoot.getElementById('overlayMessage');
+        messageBox.textContent = `locking IP from "${userToLock}" was successful.`;
+        shadowRoot.querySelector('.overlay-buttons').style.display = 'none';
+        setTimeout(() => {
+          shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
+          shadowRoot.querySelector('.overlay-buttons').style.display = 'flex';
+          userToLock = null;
+        }, 2000);
+      }
+    });
+  }
+  const cancelBtn = shadowRoot.getElementById('cancelLockBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
+      userToLock = null;
+    });
+  }
+  shadowRoot.host.addEventListener("keydown", (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    switch (e.key.toLowerCase()) {
+      case 'w':
+      case 'arrowup':
+        viewBox.y -= panStep * (viewBox.h / initialViewBoxSize);
+        updateViewBox();
+        break;
+      case 's':
+      case 'arrowdown':
+        viewBox.y += panStep * (viewBox.h / initialViewBoxSize);
+        updateViewBox();
+        break;
+      case 'a':
+      case 'arrowleft':
+        viewBox.x -= panStep * (viewBox.w / initialViewBoxSize);
+        updateViewBox();
+        break;
+      case 'd':
+      case 'arrowright':
+        viewBox.x += panStep * (viewBox.w / initialViewBoxSize);
+        updateViewBox();
+        break;
+    }
+  });
+  // Drag-Bewegung
   svg.addEventListener('pointermove', e => {
     if (!dragTarget) return;
     const point = getSVGPoint(e.clientX, e.clientY);
@@ -312,19 +307,16 @@ export function setupMindmap(shadowRoot) {
     dragTarget.setAttribute("transform", `translate(${newX}, ${newY})`);
     node.x = newX;
     node.y = newY;
-    // ----------- NEU ANFANG -------------- //
     socket.emit("node-moving", {
       id: node.id,
       x: node.x,
       y: node.y,
     });
-    // ----------- NEU ENDE -------------- //
     console.log(" node-moving gesendet", node.id, node.x, node.y);
     updateConnections(id);
   });
-
-  // Click zum Deselektieren
-  svg.addEventListener("click", () => {
+  // Deselect auf SVG-Klick
+  svg.addEventListener('click', () => {
     if (selectedNode !== null) {
       highlightNode(selectedNode, false);
       selectedNode = null;
@@ -334,10 +326,8 @@ export function setupMindmap(shadowRoot) {
       selectedConnection = null;
     }
   });
-
-  // Löschen mit Delete-Taste
+  // Delete-Taste zum Entfernen von Knoten oder Verbindung
   document.addEventListener('keydown', (e) => {
-
     const activeElement = document.activeElement;
     const isInputFocused = (
       activeElement &&
@@ -348,49 +338,36 @@ export function setupMindmap(shadowRoot) {
         activeElement.closest("foreignObject") // ← Wichtig für deine SVG-Inputs!
       )
     );
-
     if (isInputFocused) {
       return;
     }
-
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       if (selectedConnection) {
-
         const fromId = selectedConnection.dataset.from;
         const toId = selectedConnection.dataset.to;
-
         if (svg.contains(selectedConnection)) {
           svg.removeChild(selectedConnection);
         }
-
         allConnections = allConnections.filter(conn =>
           conn.line !== selectedConnection
         );
         selectedConnection = null;
-        // ----------- NEU ANFANG -------------- //
         socket.emit("connection-deleted", {
           fromId,
           toId
         });
         scheduleSVGSave();
-        // ----------- NEU ENDE -------------- //
         return;
       }
-
-
       if (selectedNode) {
         const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
         if (nodeIndex === -1) return;
         const node = allNodes[nodeIndex];
         svg.removeChild(node.group);
         allNodes.splice(nodeIndex, 1);
-
-        // ----------- NEU ANFANG -------------- //
         socket.emit("node-deleted", { id: selectedNode });
         scheduleSVGSave();
-        // ----------- NEU ENDE -------------- //
-
         // Verbindungen mit dem Knoten entfernen
         allConnections = allConnections.filter(conn => {
           if (conn.fromId === selectedNode || conn.toId === selectedNode) {
@@ -403,46 +380,51 @@ export function setupMindmap(shadowRoot) {
       }
     }
   });
-
-  // Export/Save Buttons
+  svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+  let zoom = 1;
+  const zoomStep = 0.025;
+  const minZoom = 0.1;
+  const maxZoom = 3;
+  // Zoom mit Mausrad
+  svg.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    // Zoomrichtung
+    zoom += e.deltaY > 0 ? -zoomStep : zoomStep;
+    zoom = Math.min(Math.max(zoom, minZoom), maxZoom);
+    // Zoom um Mausposition (optional)
+    const mouseSVG = getSVGPoint(e.clientX, e.clientY);
+    // Neue ViewBox-Größe basierend auf Zoom
+    const newWidth = initialViewBoxSize / zoom;
+    const newHeight = initialViewBoxSize / zoom;
+    // ViewBox so verschieben, dass Zoom um Mausposition bleibt
+    viewBox.x = mouseSVG.x - (mouseSVG.x - viewBox.x) * (newWidth / viewBox.w);
+    viewBox.y = mouseSVG.y - (mouseSVG.y - viewBox.y) * (newHeight / viewBox.h);
+    viewBox.w = newWidth;
+    viewBox.h = newHeight;
+    updateViewBox();
+  });
+  function updateViewBox() {
+    svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+  }
   const downloadBtn = shadowRoot.getElementById('downloadbtn');
-  downloadBtn?.addEventListener('click', () => exportMindmapAsSVG(svg));
-
-  const saveBtn = shadowRoot.getElementById('saveButton');
-  saveBtn?.addEventListener('click', () => saveCurrentMindmap(svg));
-
-  // Lock-Overlay-Buttons
-  shadowRoot.getElementById('confirmLockBtn')?.addEventListener('click', async () => {
-    if (userToLock) {
-      await lockUserByNickname(userToLock);
-      const msg = shadowRoot.getElementById('overlayMessage');
-      msg.textContent = `locking IP from "${userToLock}" was successful.`;
-      shadowRoot.querySelector('.overlay-buttons').style.display = 'none';
-
-      setTimeout(() => {
-        shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
-        shadowRoot.querySelector('.overlay-buttons').style.display = 'flex';
-        userToLock = null;
-      }, 2000);
-    }
-  });
-
-  shadowRoot.getElementById('cancelLockBtn')?.addEventListener('click', () => {
-    shadowRoot.getElementById('ipLockOverlay').style.display = 'none';
-    userToLock = null;
-  });
-
-  // Zugriffskontrolle und Daten laden
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      const svgElement = shadowRoot.getElementById('mindmap');
+      if (svgElement) {
+        exportMindmapAsSVG(svgElement);
+      } else {
+        console.error("SVG nicht gefunden für Export.");
+      }
+    });
+  }
   initializeAccessControl(shadowRoot);
+  // Falls eine ID vorhanden ist, lade die Mindmap
   if (mindmapId) {
     loadMindmapFromDB(mindmapId);
   }
-
   console.log("✅ Mindmap im Shadow DOM vollständig initialisiert");
 }
 
-
-// ----------- NEU ANFANG -------------- //
 socket.on("user-joined", ({ userId, isAdmin }) => {
   // aktualisiere UI
 });
@@ -452,4 +434,3 @@ socket.on("user-kicked", ({ userId }) => {
 socket.on("user-left", ({ userId }) => {
   // entferne aus UI
 });
-// ----------- NEU ENDE -------------- //
