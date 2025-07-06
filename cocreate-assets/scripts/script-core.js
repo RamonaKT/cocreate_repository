@@ -18,6 +18,15 @@ let dragLine = null;
 let svg = null;
 
 // ----------- NEU ANFANG -------------- //
+
+let saveTimeout;
+function scheduleSVGSave(delay = 1000) {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    saveSVGToSupabase();
+  }, delay);
+}
+
 async function saveSVGToSupabase() {
   console.log("adding to supabase");
   const svgData = getSVGSource();
@@ -88,7 +97,7 @@ function connectNodes(fromId, toId, fromNetwork = false) {
       fromId: line.dataset.from,
       toId: line.dataset.to
     });
-    saveSVGToSupabase();
+    scheduleSVGSave();
   });
   // ----------- NEU ENDE -------------- //
 
@@ -97,7 +106,7 @@ function connectNodes(fromId, toId, fromNetwork = false) {
 
   // ----------- NEU ANFANG -------------- //
   socket.emit("connection-added", { fromId, toId });
-  saveSVGToSupabase();
+  scheduleSVGSave();
   // ----------- NEU ENDE -------------- //
 
 }
@@ -158,7 +167,8 @@ function addEventListenersToNode(group, id, r) {
       const shape = node.group.querySelector('ellipse, rect');
       if (!shape) return;
       shape.classList.remove('dragging');
-
+      socket.emit("node-moved", { id: node.id, x: node.x, y: node.y });
+      scheduleSVGSave();
     }
     dragTarget = null;
   });
@@ -209,21 +219,23 @@ function addEventListenersToNode(group, id, r) {
     fo.style.pointerEvents = 'all';
     group.appendChild(fo);
     input.focus();
-    const save = () => {
+    const save = async () => {
       const value = input.value.trim();
       if (value) {
         text.textContent = value;
-
       }
       if (group.contains(fo)) {
         group.removeChild(fo);
       }
 
-      // ----------- NEU ANFANG -------------- //
-      socket.emit("node-renamed", { id, text: value })
-      saveSVGToSupabase();
-      // ----------- NEU ENDE -------------- //
+      socket.emit("node-renamed", { id, text: value });
+      try {
+        await saveSVGToSupabase(); // <- hier wird gewartet
+      } catch (e) {
+        console.error("Fehler beim Speichern:", e);
+      }
     };
+
     input.addEventListener("blur", save);
     input.addEventListener("keydown", e => {
       if (e.key === "Enter") {
@@ -297,8 +309,8 @@ function createDraggableNode(x, y, type, idOverride, fromNetwork = false) {
   if (!fromNetwork) {
     socket.emit("node-added", { id, x, y, type });
   }
-  saveSVGToSupabase();
-// ----------- NEU ENDE -------------- //
+  scheduleSVGSave();
+  // ----------- NEU ENDE -------------- //
 }
 async function initializeAccessControl(shadowRoot) {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
@@ -907,13 +919,13 @@ async function loadMindmapFromDB(id) {
         if (svg.contains(line)) {
           svg.removeChild(line);
         }
-// ----------- NEU ANFANG -------------- //
+        // ----------- NEU ANFANG -------------- //
         socket.emit("connection-deleted", {
           fromId: line.dataset.from,
           toId: line.dataset.to
         });
-        saveSVGToSupabase();
-// ----------- NEU ENDE -------------- //
+        scheduleSVGSave();
+        // ----------- NEU ENDE -------------- //
 
         allConnections = allConnections.filter(conn => conn.line !== line);
         if (selectedConnection === line) selectedConnection = null;
@@ -922,7 +934,7 @@ async function loadMindmapFromDB(id) {
 
       // ----------- NEU ANFANG -------------- //
       socket.emit("connection-added", { fromId, toId });
-      saveSVGToSupabase();
+      scheduleSVGSave();
       // ----------- NEU ENDE -------------- //
     }
   });
@@ -1039,13 +1051,13 @@ export function setupMindmap(shadowRoot) {
     dragTarget.setAttribute("transform", `translate(${newX}, ${newY})`);
     node.x = newX;
     node.y = newY;
-// ----------- NEU ANFANG -------------- //
+    // ----------- NEU ANFANG -------------- //
     socket.emit("node-moving", {
       id: node.id,
       x: node.x,
       y: node.y,
     });
-// ----------- NEU ENDE -------------- //
+    // ----------- NEU ENDE -------------- //
     console.log(" node-moving gesendet", node.id, node.x, node.y);
     updateConnections(id);
   });
@@ -1065,14 +1077,22 @@ export function setupMindmap(shadowRoot) {
 
   // Delete-Taste zum Entfernen von Knoten oder Verbindung
   document.addEventListener('keydown', (e) => {
+
     const activeElement = document.activeElement;
-    if (activeElement && (
-      activeElement.tagName === "INPUT" ||
-      activeElement.tagName === "TEXTAREA" ||
-      activeElement.isContentEditable
-    )) {
+    const isInputFocused = (
+      activeElement &&
+      (
+        activeElement.tagName === "INPUT" ||
+        activeElement.tagName === "TEXTAREA" ||
+        activeElement.isContentEditable ||
+        activeElement.closest("foreignObject") // ← Wichtig für deine SVG-Inputs!
+      )
+    );
+
+    if (isInputFocused) {
       return;
     }
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       if (selectedConnection) {
@@ -1083,18 +1103,18 @@ export function setupMindmap(shadowRoot) {
         if (svg.contains(selectedConnection)) {
           svg.removeChild(selectedConnection);
         }
-        
+
         allConnections = allConnections.filter(conn =>
           conn.line !== selectedConnection
         );
         selectedConnection = null;
-// ----------- NEU ANFANG -------------- //
+        // ----------- NEU ANFANG -------------- //
         socket.emit("connection-deleted", {
           fromId,
           toId
         });
-        saveSVGToSupabase();
-// ----------- NEU ENDE -------------- //
+        scheduleSVGSave();
+        // ----------- NEU ENDE -------------- //
         return;
       }
 
@@ -1108,8 +1128,8 @@ export function setupMindmap(shadowRoot) {
 
         // ----------- NEU ANFANG -------------- //
         socket.emit("node-deleted", { id: selectedNode });
-        saveSVGToSupabase();
-// ----------- NEU ENDE -------------- //
+        scheduleSVGSave();
+        // ----------- NEU ENDE -------------- //
 
         // Verbindungen mit dem Knoten entfernen
         allConnections = allConnections.filter(conn => {
