@@ -1,5 +1,5 @@
 import { supabase } from '../../supabase/client.js';
-import { socket } from './realtime-sync.js';
+import { socket, initRealtimeSync } from './realtime-sync.js';
 import {
   enableToolbarDrag,
   enableSvgDrop
@@ -49,7 +49,8 @@ let dragTarget = null;
 let offset = { x: 0, y: 0 };
 let userNickname = null;
 let userToLock = null;
-let selectedConnection = null;
+let dragLine = null;
+let viewBox = { x: 0, y: 0, w: 3000, h: 2000 };
 
 window.submitNickname = submitNickname;
 window.exportMindmapToPDF = exportMindmapToPDF;
@@ -422,15 +423,15 @@ export function setupMindmap(shadowRoot) {
   if (mindmapId) {
     loadMindmapFromDB(mindmapId);
   }
+  initRealtimeSync(mindmapId, allNodes, allConnections, svg);
+  socket.on("user-joined", ({ userId, isAdmin }) => {
+  // aktualisiere UI
+  });
+  socket.on("user-kicked", ({ userId }) => {
+    // entferne aus UI
+  });
+  socket.on("user-left", ({ userId }) => {
+    // entferne aus UI
+  });
   console.log("✅ Mindmap im Shadow DOM vollständig initialisiert");
 }
-
-socket.on("user-joined", ({ userId, isAdmin }) => {
-  // aktualisiere UI
-});
-socket.on("user-kicked", ({ userId }) => {
-  // entferne aus UI
-});
-socket.on("user-left", ({ userId }) => {
-  // entferne aus UI
-});
