@@ -10,6 +10,38 @@ import { getCreations, saveCreation } from '../../supabase/database.js';
 import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
 
+
+async function hashIp(ip) {
+  // Fallback-SHA-256 für nicht-sichere Kontexte (nur JS, nicht WebCrypto)
+  // KEIN kryptografisch sicherer Hash – aber ausreichend zur Unterscheidung
+  function simpleHash(str) {
+    let hash = 0;
+    if (str.length === 0) return hash.toString();
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash |= 0; // in 32bit verwandeln
+    }
+    return Math.abs(hash).toString();
+  }
+
+  if (window.isSecureContext && window.crypto?.subtle) {
+    // Sichere Umgebung (HTTPS, localhost)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(ip);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  } else {
+    // Unsichere Umgebung (HTTP etc.)
+    return simpleHash(ip);
+  }
+}
+
+
+
+
 const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
 let initialSyncDone = false;
@@ -322,7 +354,7 @@ async function initializeAccessControl(shadowRoot) {
         .from('users')
         .select('*')
         .eq('nickname', storedNickname)
-        .eq('ipadress', ip)
+        .eq('ipadress', await hashIp(ip))
         .maybeSingle();
       if (!error && user && !user.locked && user.mindmap_id === mindmapId) {
         userNickname = storedNickname;
@@ -339,7 +371,7 @@ async function initializeAccessControl(shadowRoot) {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('ipadress', ip)
+      .eq('ipadress', await hashIp(ip))
       .eq('mindmap_id', mindmapId)
       .maybeSingle();
     if (!error && user && !user.locked) {
@@ -375,7 +407,7 @@ function startIpLockWatcher(ip, mindmapId, shadowRoot) {
       const { data: users, error } = await supabase
         .from('users')
         .select('nickname, locked, locked_until')
-        .eq('ipadress', ip)
+        .eq('ipadress', await hashIp(ip))
         .eq('mindmap_id', mindmapId);
       if (error) {
         console.error("Fehler bei Lock-Check:", error.message);
@@ -646,7 +678,7 @@ window.submitNickname = async function () {
   const { data: existingLocks, error: lockError } = await supabase
     .from('users')
     .select('locked, locked_until')
-    .eq('ipadress', ip)
+    .eq('ipadress', await hashIp(ip))
     .eq('mindmap_id', mindmapId);
   if (lockError) {
     alert("Fehler beim Sperr-Check.");
@@ -697,7 +729,7 @@ window.submitNickname = async function () {
       .from('users')
       .insert([{
         nickname: input,
-        ipadress: ip,
+        ipadress: await hashIp(ip),
         locked: false,
         admin: isAdmin,
         mindmap_id: parseInt(mindmapId)
@@ -746,7 +778,7 @@ window.addEventListener('load', async () => {
         .from('users')
         .select('*')
         .eq('nickname', storedNickname)
-        .eq('ipadress', ip)
+        .eq('ipadress', await hashIp(ip))
         .maybeSingle();
       if (!error && user && !user.locked && user.mindmap_id == mindmapId) {
         userNickname = storedNickname;
@@ -764,7 +796,7 @@ window.addEventListener('load', async () => {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('ipadress', ip)
+      .eq('ipadress', await hashIp(ip))
       .eq('mindmap_id', mindmapId)
       .maybeSingle();
     if (!error && user && !user.locked) {
@@ -1195,7 +1227,7 @@ window.addEventListener('load', async () => {
         .from('users')
         .select('*')
         .eq('nickname', storedNickname)
-        .eq('ipadress', ip)
+        .eq('ipadress', await hashIp(ip))
         .maybeSingle();
       if (!error && user && !user.locked && user.mindmap_id == mindmapId) {
         userNickname = storedNickname;
@@ -1213,7 +1245,7 @@ window.addEventListener('load', async () => {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('ipadress', ip)
+      .eq('ipadress', await hashIp(ip))
       .eq('mindmap_id', mindmapId)
       .maybeSingle();
     if (!error && user && !user.locked) {
