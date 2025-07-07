@@ -1,3 +1,4 @@
+import { hashIp } from './hash';
 
 export function createNicknameModal(shadowroot = document) {
     if (document.getElementById('nicknameModal')) return; 
@@ -72,7 +73,7 @@ export async function submitNickname() {
 const { data: existingLocks, error: lockError } = await supabase
   .from('users')
   .select('locked, locked_until')
-  .eq('ipadress', ip)
+  .eq('ipadress', await hashIp(ip))
   .eq('mindmap_id', mindmapId);
 
 if (lockError) {
@@ -133,7 +134,7 @@ if (existingUser) {
   .from('users')
   .insert([{
     nickname: input,
-    ipadress: ip,
+    ipadress: await hashIp(ip),
     locked: false,
     admin: isAdmin,
     mindmap_id: parseInt(mindmapId)
@@ -189,7 +190,7 @@ export async function initializeAccessControl(shadowRoot) {
         .from('users')
         .select('*')
         .eq('nickname', storedNickname)
-        .eq('ipadress', ip)
+        .eq('ipadress', await hashIp(ip))
         .maybeSingle();
 
       if (!error && user && !user.locked && user.mindmap_id === mindmapId) {
@@ -208,7 +209,7 @@ export async function initializeAccessControl(shadowRoot) {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('ipadress', ip)
+      .eq('ipadress', await hashIp(ip))
       .eq('mindmap_id', mindmapId)
       .maybeSingle();
 
@@ -236,7 +237,7 @@ export function startIpLockWatcher(ip, mindmapId, shadowRoot) {
       const { data: users, error } = await supabase
         .from('users')
         .select('nickname, locked, locked_until')
-        .eq('ipadress', ip)
+        .eq('ipadress', await hashIp(ip))
         .eq('mindmap_id', mindmapId);
 
       if (error) {

@@ -1,4 +1,5 @@
 import { supabase } from '../../supabase/client.js';
+import { hashIp } from './hash';
 import { socket, initRealtimeSync } from './realtime-sync.js';
 import {
   enableToolbarDrag,
@@ -100,7 +101,7 @@ window.addEventListener('load', async () => {
         .from('users')
         .select('*')
         .eq('nickname', storedNickname)
-        .eq('ipadress', ip)
+        .eq('ipadress', await hashIp(ip))
         .maybeSingle();
 
       if (!error && user && !user.locked && user.mindmap_id == mindmapId) {
@@ -119,7 +120,7 @@ window.addEventListener('load', async () => {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('ipadress', ip)
+      .eq('ipadress', await hashIp(ip))
       .eq('mindmap_id', mindmapId)
       .maybeSingle();
     if (!error && user && !user.locked) {
