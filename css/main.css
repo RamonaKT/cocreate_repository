@@ -1,7 +1,6 @@
 :root {
   --secondary-main-color: #797ec6;
   --dialog-background-color: #caeff0;
-  color:#797ec6;
 }
 
 cocreate-mindmap::part(dialoge) {

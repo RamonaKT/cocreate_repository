@@ -2,13 +2,12 @@
     --color-level-1: #797ec6;
     --color-level-2: #a4a9ea;
     --color-level-3: #ced2ff;
-    --secondary-main-color: var(--secondary-main-color);
-    --dialog-background-color: inherit;
-    all: inherit;
+    --cocreate-main-color: var(--secondary-main-color);
+    --cocreate-dialog-background-color: var(--dialog-background-color)
 }
 
 h2 {
-  color: inherit;
+  color: var(--cocreate-main-color);
 }
 
 dialog {
@@ -16,8 +15,12 @@ dialog {
     margin: 0;
     top:10vh;
     left:1vw;
+    background-color: var(--cocreate-dialog-background-color);
 }
 
+button {
+  background-color: var(--cocreate-main-color);
+}
 
 #sidebar-left {
     margin-right: 10px;
