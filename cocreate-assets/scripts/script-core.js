@@ -17,14 +17,25 @@ import {
   scheduleSVGSave
 } from './storage.js';
 import {
-  allNodes,
-  allConnections,
-  selectedNode,
-  selectedConnection,
   addEventListenersToNode,
   updateConnections,
   highlightNode
 } from './nodes.js';
+
+let selectedConnection = null;
+let allNodes = [];
+let allConnections = [];
+let selectedNode = null;
+
+// state.js
+
+export const state = {
+  allNodes: [],
+  allConnections: [],
+  selectedNode: null,
+  selectedConnection: null
+};
+
 
 const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
@@ -172,6 +183,7 @@ async function loadMindmapFromDB(id) {
         }
         selectedConnection = line;
         selectedConnection.classList.add("highlighted");
+
       });
       line.addEventListener("contextmenu", e => {
         e.preventDefault();

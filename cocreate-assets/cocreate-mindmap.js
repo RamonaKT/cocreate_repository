@@ -1,8 +1,8 @@
 import { setupMindmap } from './scripts/script-core.js';
-import iconURLDownload from './assets/icon-download.png';
-import iconURLManual from './assets/icon-manual.png';
-import iconURLOverview from './assets/icon-overview.png';
-import iconURLSave from './assets/icon-save.png';
+import iconURLDownload from './img/icon-download.png';
+import iconURLManual from './img/icon-manual.png';
+import iconURLOverview from './img/icon-overview.png';
+import iconURLSave from './img/icon-save.png';
 
 export class CoCreateMindmap extends HTMLElement {
   constructor() {

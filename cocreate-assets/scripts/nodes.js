@@ -1,8 +1,3 @@
-let allNodes = [];
-let allConnections = [];
-let selectedNode = null;
-let selectedConnection = null;
-
 
 import { socket } from './realtime-sync.js';
 import {
@@ -13,6 +8,8 @@ import {
   scheduleSVGSave,
   saveSVGToSupabase
 } from './storage.js';
+
+import { state } from './script-core.js';
 
 export function updateConnections(movedId) {
   allConnections.forEach(conn => {
