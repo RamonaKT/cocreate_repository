@@ -4,8 +4,75 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 
+
+import { dirname } from 'path';
+
+const _dirname = dirname(_filename);
+
 const app = express();
 app.use(cors());
+
+
+
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// GANZ AM ANFANG – VOR ALLEN Routen oder static()
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(200);
+});
+
+
+
+// Setze CORS-Header für ALLE statischen Dateien
+/*app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // oder deine Domain
+  next();
+});*/
+/*
+app.use('/components', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+}, express.static(path.join(__dirname, 'cocreate-assets/scripts')));
+*/
+app.get('/script-core.js', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.sendFile(path.join(__dirname, 'cocreate-assets/scripts/script-core.js'));
+});
+
+
+
+
+// Nur für component.js den CORS-Header setzen
+/*app.get('/component.js', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.sendFile(path.join(__dirname, 'cocreate-assets/scripts/component.js'));
+});*/
+
+app.get('/component.js', (req, res) => {
+  console.log('>> /component.js geladen');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); // <<< wichtig!
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendFile(path.join(__dirname, 'cocreate-assets/scripts/component.js'));
+});
+
+
+
+
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -101,7 +168,17 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+//const PORT = process.env.PORT || 3000;
+/*server.listen(PORT, () => {
     console.log(`🚀 Socket.IO Server läuft auf http://localhost:${PORT}`);
+});*/
+/*
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Socket.IO Server läuft auf http://0.0.0.0:${PORT}`);
+});*/
+
+const PORT = 8200;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server läuft auf http://0.0.0.0:${PORT}`);
 });
+

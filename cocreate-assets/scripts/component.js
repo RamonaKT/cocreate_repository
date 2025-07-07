@@ -8,7 +8,7 @@ class MyMindmap extends HTMLElement {
       </div>
     `;
 
-    const module = await import('http://141.72.13.151:8200/script-core.js');
+    const module = await import('http://141.72.13.151:8200/cocreate-mindmap.js');
     module.setupMindmap(this);  // Achtung: setupMindmap muss exportiert sein!
   }
 }

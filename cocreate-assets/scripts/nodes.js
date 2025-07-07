@@ -275,4 +275,4 @@ export function createDraggableNode(x, y, type, idOverride, fromNetwork = false)
   scheduleSVGSave();
 }
 
-export { allNodes, allConnections, selectedNode, selectedConnection };
+//export { allNodes, allConnections, selectedNode, selectedConnection };
