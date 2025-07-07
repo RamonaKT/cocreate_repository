@@ -1,5 +1,11 @@
 :root {
-  --main-heading-color: #797ec6;
+  --secondary-main-color: #797ec6;
+  --dialog-background-color: #caeff0;
+  color:#797ec6;
+}
+
+cocreate-mindmap::part(dialoge) {
+  background: rgb(223, 246, 247);
 }
 
 body {
@@ -25,7 +31,7 @@ body {
     width: auto;
 }
 
-/*Überschrift erstmal unsichbar weil unsicher was styling angeht*/
+
 h1 {
     font-size: 4vh;
     color: black;
@@ -36,7 +42,7 @@ h1 {
 } 
 
 dialog {
-    background-color: #caeff0;
+    background-color: var(--dialog-background-color);
     position: fixed;
     margin: 0;
     top:10vh;
@@ -47,12 +53,13 @@ h2 {
     margin-top: 0;
     border-top: 0;
     padding-top: 0;
-    color: #797ec6;
+    color: var(--secondary-main-color);
 }
 
 button {
     border-radius: 20px;
     margin-top: 10px;
-    background-color: #797ec6;
+    background-color: var(--secondary-main-color);
+    color:black;
 }
 

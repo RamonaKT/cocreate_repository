@@ -1,4 +1,5 @@
 import { setupMindmap } from './scripts/script-core.js';
+
 export class CoCreateMindmap extends HTMLElement {
   constructor() {
     super();
@@ -8,13 +9,15 @@ export class CoCreateMindmap extends HTMLElement {
   async connectedCallback() {
     
     const cocreateCss = new URL('./styles/cocreate-style.css', import.meta.url);
-
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = cocreateCss;
-
-    this.shadowRoot.append(link); 
-
+    this.shadowRoot.append(link);
+    const mainCss = new URL('./styles/cocreate-style.css', import.meta.url); 
+    const mainlink = document.createElement('mainlink');
+    mainlink.rel = 'stylesheet';
+    mainlink.href = mainCss;
+    this.shadowRoot.append(mainlink);
     const container = document.createElement('div');
     container.innerHTML = `
       <div id="toolbar">
@@ -29,7 +32,7 @@ export class CoCreateMindmap extends HTMLElement {
             style="cursor: pointer;" draggable="false" 
             onclick="this.getRootNode().getElementById('dialogIconManual').showModal()">
 
-          <dialog id="dialogIconManual">
+          <dialog part="dialoge" id="dialogIconManual">
             <h2>Quick-Start manuell</h2>
             <p>save to open new mindmap. everyone needs access to server. share id. have fun.</p>
             <button class="close" draggable="false"
@@ -40,7 +43,7 @@ export class CoCreateMindmap extends HTMLElement {
             style="cursor: pointer;" draggable="false" 
             onclick="this.getRootNode().getElementById('dialogIconOverviewUser').showModal(); window.loadUsersForCurrentMindmap(this.getRootNode());">
 
-          <dialog id="dialogIconOverviewUser">
+          <dialog part="dialoge" id="dialogIconOverviewUser">
             <h2>User-Overview</h2>
             <div id="userListContainer"></div>
             <button class="close" 

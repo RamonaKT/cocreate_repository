@@ -2,12 +2,22 @@
     --color-level-1: #797ec6;
     --color-level-2: #a4a9ea;
     --color-level-3: #ced2ff;
-    color: inherit;
+    --secondary-main-color: var(--secondary-main-color);
+    --dialog-background-color: inherit;
+    all: inherit;
 }
 
 h2 {
-  color: var(--main-heading-color);
+  color: inherit;
 }
+
+dialog {
+    position: fixed;
+    margin: 0;
+    top:10vh;
+    left:1vw;
+}
+
 
 #sidebar-left {
     margin-right: 10px;
@@ -21,7 +31,6 @@ h2 {
     text-align: left;
     overflow-y: auto;
     font-size: 14px;
-    font-family: sans-serif;
 }
 
 .sidebar img {
@@ -30,7 +39,7 @@ h2 {
     border-radius: 15%;
 }
 
-/*Die Toolbar mit den Items zum ziehen*/
+/*Die Toolbar mit den Items zum ziehen*/ 
 #toolbar {
     position: fixed;
     display: flex;
@@ -39,8 +48,6 @@ h2 {
     padding: 10px;
     background: transparent;
     height: 6vh;
-    /*border-top: 1px solid black;
-    border-bottom: 1px solid black;*/
     right: 1vw;
     top:10vh;
 }
