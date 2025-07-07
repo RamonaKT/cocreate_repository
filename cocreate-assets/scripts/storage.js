@@ -3,6 +3,11 @@ let saveTimeout;
 import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
 // ----------- NEU ENDE -------------- //
 
+const svg = shadowRoot.getElementById('mindmap');
+
+import { supabase } from '../../supabase/client.js';
+import { mindmapId } from "./init";
+
 export function getSVGSource() {
   const serializer = new XMLSerializer();
   return serializer.serializeToString(svg);

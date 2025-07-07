@@ -1,4 +1,8 @@
 import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
+import {state} from "./script-core";
+import { mindmapId } from "./init";
+
+const svg = shadowRoot.getElementById('mindmap');;
 
 let socket;
 let allNodesRef = [];
@@ -17,7 +21,7 @@ export function initRealtimeSync(mindmapId, nodes, connections, svg) {
     socket.emit("join-map", { mindmapId: mindmapId, userId });
     socket.on("initial-sync", ({ nodes, users }) => {
     nodes.forEach(data => {
-        const node = allNodes.find(n => n.id === data.id);
+        const node = state.allNodes.find(n => n.id === data.id);
         if (node) {
         node.x = data.x;
         node.y = data.y;
@@ -28,7 +32,7 @@ export function initRealtimeSync(mindmapId, nodes, connections, svg) {
 
     socket.on("node-moving", data => {
     console.log("📡 node-moving empfangen", data);
-    const node = allNodes.find(n => n.id === data.id);
+    const node = state.allNodes.find(n => n.id === data.id);
     if (node) {
         node.x = data.x;
         node.y = data.y;
@@ -39,7 +43,7 @@ export function initRealtimeSync(mindmapId, nodes, connections, svg) {
 
 
     socket.on("node-moved", data => {
-    const node = allNodes.find(n => n.id === data.id);
+    const node = state.allNodes.find(n => n.id === data.id);
     if (node) {
         node.x = data.x;
         node.y = data.y;
@@ -49,20 +53,20 @@ export function initRealtimeSync(mindmapId, nodes, connections, svg) {
     });
 
     socket.on("node-added", data => {
-    if (!allNodes.find(n => n.id === data.id)) {
+    if (!state.allNodes.find(n => n.id === data.id)) {
         createDraggableNode(data.x, data.y, data.type, data.id, true);
     }
     });
     socket.on("node-deleted", ({ id }) => {
-    const nodeIndex = allNodes.findIndex(n => n.id === id);
+    const nodeIndex = state.allNodes.findIndex(n => n.id === id);
     if (nodeIndex === -1) return;
-    const node = allNodes[nodeIndex];
+    const node = state.allNodes[nodeIndex];
     if (svg.contains(node.group)) {
         svg.removeChild(node.group);
     }
-    allNodes.splice(nodeIndex, 1);
+    state.allNodes.splice(nodeIndex, 1);
     // Verbindungen entfernen
-    allConnections = allConnections.filter(conn => {
+    state.allConnections = state.allConnections.filter(conn => {
         if (conn.fromId === id || conn.toId === id) {
         if (svg.contains(conn.line)) {
             svg.removeChild(conn.line);
@@ -74,19 +78,19 @@ export function initRealtimeSync(mindmapId, nodes, connections, svg) {
     });
     socket.on("connection-added", ({ fromId, toId }) => {
     // Duplikate verhindern
-    if (allConnections.some(conn => conn.fromId === fromId && conn.toId === toId)) return;
+    if (state.allConnections.some(conn => conn.fromId === fromId && conn.toId === toId)) return;
     connectNodes(fromId, toId);
     });
     socket.on("connection-deleted", ({ fromId, toId }) => {
-    const connIndex = allConnections.findIndex(conn => conn.fromId === fromId && conn.toId === toId);
+    const connIndex = state.allConnections.findIndex(conn => conn.fromId === fromId && conn.toId === toId);
     if (connIndex !== -1) {
-        const conn = allConnections[connIndex];
+        const conn = state.allConnections[connIndex];
         svg.removeChild(conn.line);
-        allConnections.splice(connIndex, 1);
+        state.allConnections.splice(connIndex, 1);
     }
     });
     socket.on("node-renamed", ({ id, text }) => {
-    const node = allNodes.find(n => n.id === id);
+    const node = state.allNodes.find(n => n.id === id);
     if (node) {
         const textEl = node.group.querySelector("text");
         if (textEl) {

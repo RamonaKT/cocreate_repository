@@ -1,11 +1,15 @@
 // dragdrop.js
 import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
+const svg = shadowRoot.getElementById('mindmap');
+
 /**
  * Rechnet Mausposition in SVG-Koordinaten um.
  */
 export function getSVGPoint(svg, x, y) {
-  const pt = svg.createSVGPoint();
+  if (typeof svg.createSVGPoint !== 'function') {
+    throw new Error("getSVGPoint: svg ist kein gültiges SVGSVGElement");
+  }const pt = svg.createSVGPoint();
   pt.x = x;
   pt.y = y;
   return pt.matrixTransform(svg.getScreenCTM().inverse());

@@ -24,23 +24,12 @@ import {
 import {
   addEventListenersToNode,
   updateConnections,
-  highlightNode
+  highlightNode,
+  createDraggableNode
 } from './nodes.js';
 
-let selectedConnection = null;
-let allNodes = [];
-let allConnections = [];
-let selectedNode = null;
 
 // state.js
-
-export const state = {
-  allNodes: [],
-  allConnections: [],
-  selectedNode: null,
-  selectedConnection: null
-};
-
 
 const params = new URLSearchParams(window.location.search);
 const mindmapId = params.get('id');
@@ -51,21 +40,25 @@ const getCSSColor = (level) =>
   2: { r: 50, color: getCSSColor(2), label: 'Ebene 2', fontSize: 14 },
   3: { r: 40, color: getCSSColor(3), label: 'Ebene 3', fontSize: 12 },
 };
-
+const zoomStep = 0.1;
+const panStep = 50;
+const initialViewBoxSize = 500;
+const centerX = 250;
+const centerY = 250;
+let viewBox = { x: 0, y: 0, w: 3000, h: 2000 };
 let svg = null;
 let dragTarget = null;
 let offset = { x: 0, y: 0 };
 let userNickname = null;
 let userToLock = null;
 let dragLine = null;
-let viewBox = { x: 0, y: 0, w: 3000, h: 2000 };
 let draggedType;
 
 window.submitNickname = submitNickname;
 window.exportMindmapToPDF = exportMindmapToPDF;
 window.loadUsersForCurrentMindmap = loadUsersForCurrentMindmap;
 
-function createUUID() {
+export function createUUID() {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
   }
@@ -162,14 +155,14 @@ async function loadMindmapFromDB(id) {
   svg.setAttribute("viewBox", loadedSVG.getAttribute("viewBox") || "0 0 1000 600");
   // Initialisiere geladene Knoten
   svg.querySelectorAll('g.draggable').forEach(group => {
-    const id = group.dataset.nodeId || 'node' + allNodes.length;
+    const id = group.dataset.nodeId || 'node' + state.allNodes.length;
     const transform = group.getAttribute("transform");
     const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
     const x = parseFloat(match?.[1] || 0);
     const y = parseFloat(match?.[2] || 0);
     const shape = group.querySelector('ellipse, rect');
     const r = shape?.getAttribute('rx') || shape?.getAttribute('r') || 40;
-    allNodes.push({ id, group, x, y, r: parseFloat(r) });
+    state.allNodes.push({ id, group, x, y, r: parseFloat(r) });
     // EventListener hinzufügen wie in createDraggableNode()
     addEventListenersToNode(group, id, parseFloat(r));
   });
@@ -180,15 +173,15 @@ async function loadMindmapFromDB(id) {
       // Event-Handling hinzufügen
       line.addEventListener("click", e => {
         e.stopPropagation();
-        if (selectedNode !== null) {
-          highlightNode(selectedNode, false);
-          selectedNode = null;
+        if (state.selectedNode !== null) {
+          highlightNode(state.selectedNode, false);
+          state.selectedNode = null;
         }
-        if (selectedConnection) {
-          selectedConnection.classList.remove("highlighted");
+        if (state.selectedConnection) {
+          state.selectedConnection.classList.remove("highlighted");
         }
-        selectedConnection = line;
-        selectedConnection.classList.add("highlighted");
+        state.selectedConnection = line;
+        state.selectedConnection.classList.add("highlighted");
 
       });
       line.addEventListener("contextmenu", e => {
@@ -201,10 +194,10 @@ async function loadMindmapFromDB(id) {
           toId: line.dataset.to
         });
         scheduleSVGSave();
-        allConnections = allConnections.filter(conn => conn.line !== line);
-        if (selectedConnection === line) selectedConnection = null;
+        state.allConnections = state.allConnections.filter(conn => conn.line !== line);
+        if (state.selectedConnection === line) state.selectedConnection = null;
       })
-      allConnections.push({ fromId, toId, line });
+      state.allConnections.push({ fromId, toId, line });
       socket.emit("connection-added", { fromId, toId });
       scheduleSVGSave();
     }
@@ -232,12 +225,12 @@ export function setupMindmap(shadowRoot) {
   svg.addEventListener('dragover', e => e.preventDefault());
   svg.addEventListener('drop', e => {
     e.preventDefault();
-    const svgPoint = getSVGPoint(e.clientX, e.clientY);
+    const svgPoint = getSVGPoint(svg, e.clientX, e.clientY);
     createDraggableNode(svgPoint.x, svgPoint.y, draggedType);
   });
   svg.addEventListener('pointermove', e => {
     if (dragLine) {
-      const svgPoint = getSVGPoint(e.clientX, e.clientY);
+      const svgPoint = getSVGPoint(svg, e.clientX, e.clientY);
       dragLine.setAttribute("x2", svgPoint.x);
       dragLine.setAttribute("y2", svgPoint.y);
     }
@@ -249,13 +242,13 @@ export function setupMindmap(shadowRoot) {
     dragLine = null;
   }
   svg.addEventListener('click', () => {
-    if (selectedNode) {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
+    if (state.selectedNode) {
+      highlightNode(state.selectedNode, false);
+      state.selectedNode = null;
     }
-    if (selectedConnection) {
-      selectedConnection.classList.remove('highlighted');
-      selectedConnection = null;
+    if (state.selectedConnection) {
+      state.selectedConnection.classList.remove('highlighted');
+      state.selectedConnection = null;
     }
   });
   const confirmBtn = shadowRoot.getElementById('confirmLockBtn');
@@ -309,9 +302,9 @@ export function setupMindmap(shadowRoot) {
   // Drag-Bewegung
   svg.addEventListener('pointermove', e => {
     if (!dragTarget) return;
-    const point = getSVGPoint(e.clientX, e.clientY);
+    const point = getSVGPoint(svg, e.clientX, e.clientY);
     const id = dragTarget.dataset.nodeId;
-    const node = allNodes.find(n => n.id === id);
+    const node = state.allNodes.find(n => n.id === id);
     if (!node) return;
     const newX = point.x - offset.x;
     const newY = point.y - offset.y;
@@ -328,13 +321,13 @@ export function setupMindmap(shadowRoot) {
   });
   // Deselect auf SVG-Klick
   svg.addEventListener('click', () => {
-    if (selectedNode !== null) {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
+    if (state.selectedNode !== null) {
+      highlightNode(state.selectedNode, false);
+      state.selectedNode = null;
     }
-    if (selectedConnection) {
-      selectedConnection.classList.remove('highlighted');
-      selectedConnection = null;
+    if (state.selectedConnection) {
+      state.selectedConnection.classList.remove('highlighted');
+      state.selectedConnection = null;
     }
   });
   // Delete-Taste zum Entfernen von Knoten oder Verbindung
@@ -354,16 +347,16 @@ export function setupMindmap(shadowRoot) {
     }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
-      if (selectedConnection) {
-        const fromId = selectedConnection.dataset.from;
-        const toId = selectedConnection.dataset.to;
-        if (svg.contains(selectedConnection)) {
-          svg.removeChild(selectedConnection);
+      if (state.selectedConnection) {
+        const fromId = state.selectedConnection.dataset.from;
+        const toId = state.selectedConnection.dataset.to;
+        if (svg.contains(state.selectedConnection)) {
+          svg.removeChild(state.selectedConnection);
         }
-        allConnections = allConnections.filter(conn =>
-          conn.line !== selectedConnection
+        state.allConnections = state.allConnections.filter(conn =>
+          conn.line !== state.selectedConnection
         );
-        selectedConnection = null;
+        state.selectedConnection = null;
         socket.emit("connection-deleted", {
           fromId,
           toId
@@ -371,23 +364,23 @@ export function setupMindmap(shadowRoot) {
         scheduleSVGSave();
         return;
       }
-      if (selectedNode) {
-        const nodeIndex = allNodes.findIndex(n => n.id === selectedNode);
+      if (state.selectedNode) {
+        const nodeIndex = state.allNodes.findIndex(n => n.id === state.selectedNode);
         if (nodeIndex === -1) return;
-        const node = allNodes[nodeIndex];
+        const node = state.allNodes[nodeIndex];
         svg.removeChild(node.group);
-        allNodes.splice(nodeIndex, 1);
-        socket.emit("node-deleted", { id: selectedNode });
+        state.allNodes.splice(nodeIndex, 1);
+        socket.emit("node-deleted", { id: state.selectedNode });
         scheduleSVGSave();
         // Verbindungen mit dem Knoten entfernen
-        allConnections = allConnections.filter(conn => {
-          if (conn.fromId === selectedNode || conn.toId === selectedNode) {
+        state.allConnections = state.allConnections.filter(conn => {
+          if (conn.fromId === state.selectedNode || conn.toId === state.selectedNode) {
             svg.removeChild(conn.line);
             return false;
           }
           return true;
         });
-        selectedNode = null;
+        state.selectedNode = null;
       }
     }
   });
@@ -403,7 +396,7 @@ export function setupMindmap(shadowRoot) {
     zoom += e.deltaY > 0 ? -zoomStep : zoomStep;
     zoom = Math.min(Math.max(zoom, minZoom), maxZoom);
     // Zoom um Mausposition (optional)
-    const mouseSVG = getSVGPoint(e.clientX, e.clientY);
+    const mouseSVG = getSVGPoint(svg, e.clientX, e.clientY);
     // Neue ViewBox-Größe basierend auf Zoom
     const newWidth = initialViewBoxSize / zoom;
     const newHeight = initialViewBoxSize / zoom;
@@ -433,7 +426,7 @@ export function setupMindmap(shadowRoot) {
   if (mindmapId) {
     loadMindmapFromDB(mindmapId);
   }
-  initRealtimeSync(mindmapId, allNodes, allConnections, svg);
+  initRealtimeSync(mindmapId, state.allNodes, state.allConnections, svg);
   socket.on("user-joined", ({ userId, isAdmin }) => {
   // aktualisiere UI
   });
@@ -445,3 +438,15 @@ export function setupMindmap(shadowRoot) {
   });
   console.log("✅ Mindmap im Shadow DOM vollständig initialisiert");
 }
+
+
+export const state = {
+  allNodes: [],
+  allConnections: [],
+  selectedNode: null,
+  selectedConnection: null
+};
+
+export { nodeStyles };
+
+

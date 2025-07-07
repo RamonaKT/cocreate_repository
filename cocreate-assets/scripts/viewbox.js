@@ -1,5 +1,8 @@
 // viewbox.js
 
+const svg = shadowRoot.getElementById('mindmap');
+
+
 let viewBox = { x: 0, y: 0, w: 3000, h: 2000 };
 const zoomStep = 0.1;
 const panStep = 50;

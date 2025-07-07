@@ -9,7 +9,9 @@ import {
   saveSVGToSupabase
 } from './storage.js';
 
-import { state } from './script-core.js';
+import { state, nodeStyles, createUUID } from './script-core.js';
+const svg = shadowRoot.getElementById('mindmap');
+
 
 export function updateConnections(movedId) {
   allConnections.forEach(conn => {
@@ -25,8 +27,8 @@ export function updateConnections(movedId) {
 }
 
 export function connectNodes(fromId, toId, fromNetwork = false) {
-  const from = allNodes.find(n => n.id === fromId);
-  const to = allNodes.find(n => n.id === toId);
+  const from = state.allNodes.find(n => n.id === fromId);
+  const to = state.allNodes.find(n => n.id === toId);
   if (!from || !to) return;
   const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
   line.setAttribute("x1", from.x);
@@ -41,21 +43,21 @@ export function connectNodes(fromId, toId, fromNetwork = false) {
   svg.appendChild(line);
   line.addEventListener("click", e => {
     e.stopPropagation();
-    if (selectedNode !== null) {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
+    if (state.selectedNode !== null) {
+      highlightNode(state.selectedNode, false);
+      state.selectedNode = null;
     }
-    if (selectedConnection) {
-      selectedConnection.classList.remove("highlighted");
+    if (state.selectedConnection) {
+      state.selectedConnection.classList.remove("highlighted");
     }
-    selectedConnection = line;
-    selectedConnection.classList.add("highlighted");
+    state.selectedConnection = line;
+    state.selectedConnection.classList.add("highlighted");
   });
   line.addEventListener("contextmenu", e => {
     e.preventDefault();
     svg.removeChild(line);
-    allConnections = allConnections.filter(conn => conn.line !== line);
-    if (selectedConnection === line) selectedConnection = null;
+    state.allConnections = state.allConnections.filter(conn => conn.line !== line);
+    if (state.selectedConnection === line) state.selectedConnection = null;
     socket.emit("connection-deleted", {
       fromId: line.dataset.from,
       toId: line.dataset.to
@@ -63,21 +65,13 @@ export function connectNodes(fromId, toId, fromNetwork = false) {
     scheduleSVGSave();
   });
   svg.insertBefore(line, svg.firstChild);
-  allConnections.push({ fromId, toId, line });
+  state.allConnections.push({ fromId, toId, line });
   socket.emit("connection-added", { fromId, toId });
   scheduleSVGSave();
 }
-      
-export function deleteConnection(fromId, toId) {
-  const current = yConnections.toArray();
-  const updated = current.filter(conn => !(conn.fromId === fromId && conn.toId === toId));
-  yConnections.delete(0, yConnections.length);
-  yConnections.push(updated);
-}
-
 
 export function highlightNode(id, on) {
-  const node = allNodes.find(n => n.id === id);
+  const node = state.allNodes.find(n => n.id === id);
   if (!node) return;
 
   const shape = node.group.querySelector('ellipse, rect');
@@ -89,7 +83,7 @@ export function highlightNode(id, on) {
 
 
 export function addEventListenersToNode(group, id, r) {
-  const node = allNodes.find(n => n.id === id);
+  const node = state.allNodes.find(n => n.id === id);
   if (!node) return;
 
   const shape = group.querySelector('ellipse, rect');
@@ -101,7 +95,7 @@ export function addEventListenersToNode(group, id, r) {
     if (isInputClick) return;
     if (e.shiftKey) return;
 
-    const point = getSVGPoint(e.clientX, e.clientY);
+    const point = getSVGPoint(svg, e.clientX, e.clientY);
     dragTarget = group;
     offset.x = point.x - node.x;
     offset.y = point.y - node.y;
@@ -112,7 +106,7 @@ export function addEventListenersToNode(group, id, r) {
   svg.addEventListener('pointerup', (e) => {
     if (dragTarget) {
       const id = dragTarget.dataset.nodeId;
-      const node = allNodes.find(n => n.id === id);
+      const node = state.allNodes.find(n => n.id === id);
       if (!node) return;
 
       const shape = node.group.querySelector('ellipse, rect');
@@ -129,7 +123,7 @@ export function addEventListenersToNode(group, id, r) {
   svg.addEventListener('pointercancel', e => {
     if (dragTarget) {
       const id = dragTarget.dataset.nodeId;
-      const node = allNodes.find(n => n.id === id);
+      const node = state.allNodes.find(n => n.id === id);
       if (!node) return;
 
       const shape = node.group.querySelector('ellipse, rect');
@@ -145,19 +139,19 @@ export function addEventListenersToNode(group, id, r) {
   group.addEventListener('click', e => {
     e.stopPropagation();
     if (selectedConnection) {
-      selectedConnection.classList.remove('highlighted');
-      selectedConnection = null;
+      state.selectedConnection.classList.remove('highlighted');
+      state.selectedConnection = null;
     }
-    if (selectedNode === null) {
-      selectedNode = id;
+    if (state.selectedNode === null) {
+      state.selectedNode = id;
       highlightNode(id, true);
-    } else if (selectedNode !== id) {
-      connectNodes(selectedNode, id);
-      highlightNode(selectedNode, false);
-      selectedNode = null;
+    } else if (state.selectedNode !== id) {
+      connectNodes(state.selectedNode, id);
+      highlightNode(state.selectedNode, false);
+      state.selectedNode = null;
     } else {
-      highlightNode(selectedNode, false);
-      selectedNode = null;
+      highlightNode(state.selectedNode, false);
+      state.selectedNode = null;
     }
   });
 
@@ -185,16 +179,18 @@ export function addEventListenersToNode(group, id, r) {
       const value = input.value.trim();
       if (value) {
         text.textContent = value;
-        const current = yNodes.get(id);
-        if (current) {
-          yNodes.set(id, { ...current, label: value }); // <- label speichern!
-        }
+
       }
       if (group.contains(fo)) {
         group.removeChild(fo);
       }
 
+      // ----------- NEU ANFANG -------------- //
+      socket.emit("node-renamed", { id, text: value })
+      saveSVGToSupabase();
+      // ----------- NEU ENDE -------------- //
     };
+    input
 
     input.addEventListener("blur", save);
     input.addEventListener("keydown", e => {
@@ -263,7 +259,7 @@ export function createDraggableNode(x, y, type, idOverride, fromNetwork = false)
   group.appendChild(text);
 
 
-  allNodes.push({ id, group, x, y, r: style.r });
+  state.allNodes.push({ id, group, x, y, r: style.r });
 
   addEventListenersToNode(group, id, style.r);
   if (!fromNetwork) {
