@@ -25,7 +25,7 @@ export class CoCreateMindmap extends HTMLElement {
 
       <div id="mindmap-container">
         <div id="sidebar-left" class="sidebar">
-          <img src="./img/icon-manual.png" alt="Icon manual"
+          <img src="/cocreate-assets/img/icon-manual.png" alt="Icon manual"
             style="cursor: pointer;" draggable="false" 
             onclick="this.getRootNode().getElementById('dialogIconManual').showModal()">
 
@@ -36,7 +36,7 @@ export class CoCreateMindmap extends HTMLElement {
               onclick="this.closest('dialog').close()">Schließen</button>
           </dialog>
 
-          <img src="./cocreate-assets/img/icon-overview.png" alt="Icon overview user"
+          <img src="/cocreate-assets/img/icon-overview.png" alt="Icon overview user"
             style="cursor: pointer;" draggable="false" 
             onclick="this.getRootNode().getElementById('dialogIconOverviewUser').showModal(); window.loadUsersForCurrentMindmap(this.getRootNode());">
 
@@ -47,10 +47,10 @@ export class CoCreateMindmap extends HTMLElement {
               onclick="this.closest('dialog').close()">Schließen</button>
           </dialog>
 
-          <img src="cocreate-assets/img/icon-download.png" alt="Icon Download pdf"
+          <img src="/cocreate-assets/img/icon-download.png" alt="Icon Download pdf"
             class="pdfButton" id="downloadbtn" style="cursor: pointer;" draggable="false">
 
-          <img src="cocreate-assets/img/icon-save.png" alt="Icon save" id="saveButton"
+          <img src="/cocreate-assets/img/icon-save.png" alt="Icon save" id="saveButton"
             style="cursor: pointer;" draggable="false">
         </div>
 
