@@ -22,12 +22,6 @@ import {
   highlightNode
 } from './nodes.js';
 
-let selectedConnection = null;
-let allNodes = [];
-let allConnections = [];
-let selectedNode = null;
-
-// state.js
 
 export const state = {
   allNodes: [],
@@ -54,6 +48,11 @@ let userNickname = null;
 let userToLock = null;
 let dragLine = null;
 let viewBox = { x: 0, y: 0, w: 3000, h: 2000 };
+let draggedType = null;
+let selectedConnection = null;
+let allNodes = [];
+let allConnections = [];
+let selectedNode = null;
 
 window.submitNickname = submitNickname;
 window.exportMindmapToPDF = exportMindmapToPDF;
