@@ -2,7 +2,7 @@
 import { setupMindmap } from './script-core.js';
 import { initializeAccessControl } from './nicknames.js';
 import { initRealtimeSync } from './realtime-sync.js';
-import { allNodes, allConnections } from './nodes.js';
+import { allNodes, allConnections } from './script-core.js';
 
 const mindmapId = new URLSearchParams(window.location.search).get("id");
 
