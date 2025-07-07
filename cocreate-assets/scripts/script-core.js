@@ -2,15 +2,6 @@ import { supabase } from '../../supabase/client.js';
 import { hashIp } from './hash';
 import { socket, initRealtimeSync } from './realtime-sync.js';
 import {
-  enableToolbarDrag,
-  enableSvgDrop
-} from './dragdrop.js';
-import {
-  updateViewBox,
-  enableKeyboardPan,
-  enableScrollZoom
-} from './viewbox.js';
-import {
   createNicknameModal,
   showNicknameModal,
   submitNickname,
