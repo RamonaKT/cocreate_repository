@@ -258,6 +258,7 @@ export function startIpLockWatcher(ip, mindmapId, shadowRoot) {
               console.log(`🔓 Nutzer ${user.nickname} automatisch entsperrt.`);
             } else {
               console.warn(`🚫 Nutzer ${user.nickname} ist noch gesperrt.`);
+              alert("Du wurdest von dieser Mindmap vorübergehend gesperrt.");
               showNicknameModal();
               return;
             }
