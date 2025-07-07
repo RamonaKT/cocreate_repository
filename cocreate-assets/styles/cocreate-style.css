@@ -2,13 +2,17 @@
     --color-level-1: #797ec6;
     --color-level-2: #a4a9ea;
     --color-level-3: #ced2ff;
-    all: inherit;
+    color: inherit;
+}
+
+h2 {
+  color: var(--main-heading-color);
 }
 
 #sidebar-left {
     margin-right: 10px;
     max-width: 75px;
-    background-color: transparent;
+    background-color:transparent;
     position: absolute;
     left: 1vw;
     top: 10vh;
