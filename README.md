@@ -15,3 +15,6 @@
 - gestartet werden
 - 
 ! Es kann die Alte Version im Browser angezeigt werden -> Browserverlauf löschen.
+
+## Struktur
+Im Ordner "cocreate-assets" ist alles, (fast) was cocreate braucht. Die anderen Dateien gehören zur Demo Website
