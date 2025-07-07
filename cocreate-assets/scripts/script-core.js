@@ -1,6 +1,11 @@
 import { supabase } from '../../supabase/client.js';
 import { hashIp } from './hash';
 import { socket, initRealtimeSync } from './realtime-sync.js';
+import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
+import {
+  getSVGPoint
+} from './dragdrop.js'
 import {
   createNicknameModal,
   showNicknameModal,
@@ -54,6 +59,7 @@ let userNickname = null;
 let userToLock = null;
 let dragLine = null;
 let viewBox = { x: 0, y: 0, w: 3000, h: 2000 };
+let draggedType;
 
 window.submitNickname = submitNickname;
 window.exportMindmapToPDF = exportMindmapToPDF;

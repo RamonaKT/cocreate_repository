@@ -1,5 +1,6 @@
 // dragdrop.js
-
+import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
 /**
  * Rechnet Mausposition in SVG-Koordinaten um.
  */
