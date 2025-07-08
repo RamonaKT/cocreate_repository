@@ -13,11 +13,7 @@ export class CoCreateMindmap extends HTMLElement {
     link.rel = 'stylesheet';
     link.href = cocreateCss;
     this.shadowRoot.append(link);
-    const mainCss = new URL('./styles/cocreate-style.css', import.meta.url); 
-    const mainlink = document.createElement('mainlink');
-    mainlink.rel = 'stylesheet';
-    mainlink.href = mainCss;
-    this.shadowRoot.append(mainlink);
+
     const container = document.createElement('div');
     container.innerHTML = `
       <div id="toolbar">

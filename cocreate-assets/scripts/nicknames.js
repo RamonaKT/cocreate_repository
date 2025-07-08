@@ -1,11 +1,14 @@
+export function createNicknameModal(shadowRoot = document) {
+  if (!shadowRoot || shadowRoot === document) {
+  console.warn('❗ Achtung: createNicknameModal wurde ohne ShadowRoot aufgerufen!');
+  return;
+ }
 
-export function createNicknameModal(shadowroot = document) {
-    if (shadowroot.getElementById('nicknameModal')) return; 
+  if (shadowRoot.getElementById('nicknameModal')) return;
 
-    
-    const modal = shadowroot.createElement('div');
-    modal.id = 'nicknameModal';
-    modal.innerHTML = `
+  const modal = document.createElement('div');
+  modal.id = 'nicknameModal';
+  modal.innerHTML = `
     <div class="modal-content">
       <h2>Nickname wählen</h2>
       <input id="nicknameInput" type="text" placeholder="Dein Nickname" />
@@ -13,67 +16,41 @@ export function createNicknameModal(shadowroot = document) {
     </div>
   `;
 
-    shadowroot.body.appendChild(modal);
+  shadowRoot.appendChild(modal);
 
-    shadowroot.getElementById('nicknameSubmitButton').addEventListener('click', submitNickname);
-
-
-  shadowroot.getElementById('nicknameInput').addEventListener('keydown', function (event) {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      submitNickname();
-    }
+  modal.querySelector('#nicknameSubmitButton')?.addEventListener('click', () => {
+    submitNickname(shadowRoot);
   });
 
+  modal.querySelector('#nicknameInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitNickname(shadowRoot);
+    }
+  });
 }
 
-
 export function showNicknameModal(shadowRoot = document) {
-  // 1. Wenn shadowRoot = document → eigenen Container + Shadow DOM erzeugen
-  if (shadowRoot === document) {
-    let container = document.getElementById('nickname-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'nickname-container';
-      document.body.appendChild(container);
-    }
 
-    if (!container.shadowRoot) {
-      const shadow = container.attachShadow({ mode: 'open' });
-
-      // Optional: CSS einfügen
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = new URL('./styles/cocreate-style.css', import.meta.url);
-      shadow.appendChild(link);
-
-      shadowRoot = shadow; // ⚠️ Jetzt wirklich ShadowRoot setzen
-    } else {
-      shadowRoot = container.shadowRoot;
-    }
-  }
-
-  // 2. Modal anzeigen oder erstellen
+  // Modal einfügen oder anzeigen
   let modal = shadowRoot.getElementById('nicknameModal');
-
   if (!modal) {
-    createNicknameModal(shadowRoot); // ← DEINE Funktion bleibt erhalten
+    createNicknameModal(shadowRoot);
     modal = shadowRoot.getElementById('nicknameModal');
   }
 
   if (modal) {
-    modal.style.display = 'flex';
+    modal.style.display = 'flex'; // wichtig, falls CSS initial auf display:none steht
   } else {
     console.error("⚠️ Konnte Modal nicht anzeigen – fehlt.");
   }
 
-  // 3. Nickname zurücksetzen
   sessionStorage.removeItem("mindmap_nickname");
   localStorage.removeItem("mindmap_nickname");
 }
 
 
-export async function submitNickname() {
+export async function submitNickname(shadowRoot=document) {
   const input = shadowRoot.getElementById('nicknameInput').value.trim();
   if (!input) {
     alert("Bitte Nickname eingeben.");
@@ -192,7 +169,7 @@ export async function initializeAccessControl(shadowRoot) {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
   if (!mindmapId) return;
 
-  createNicknameModal(); // Modal vorbereiten
+  createNicknameModal(shadowRoot); // Modal vorbereiten
 
   let ip = 'unknown';
   try {

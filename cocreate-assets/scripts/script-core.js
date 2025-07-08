@@ -79,7 +79,7 @@ window.addEventListener('load', async () => {
   const mindmapId = new URLSearchParams(window.location.search).get('id');
   if (!mindmapId) return;
   // Modal vorbereiten, aber noch nicht zeigen
-  createNicknameModal();
+  createNicknameModal(shadowRoot);
   let ip = 'unknown';
   try {
     const res = await fetch('https://api.ipify.org?format=json');
