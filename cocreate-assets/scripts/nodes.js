@@ -10,8 +10,21 @@ import {
 } from './storage.js';
 
 import { state, nodeStyles, createUUID } from './script-core.js';
-const svg = shadowRoot.getElementById('mindmap');
+//const svg = shadowRoot.getElementById('mindmap');
 
+let svg = null;
+let dragTarget = null;
+
+export function initNodes(newSVG) {
+  svg = newSVG;
+}
+
+export function getSVG() {
+  if (!svg) {
+    throw new Error("❌ SVG wurde noch nicht initialisiert!");
+  }
+  return svg;
+}
 
 export function updateConnections(movedId) {
   allConnections.forEach(conn => {

@@ -1,7 +1,7 @@
 // dragdrop.js
 import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
-const svg = shadowRoot.getElementById('mindmap');
+//const svg = shadowRoot.getElementById('mindmap');
 
 /**
  * Rechnet Mausposition in SVG-Koordinaten um.

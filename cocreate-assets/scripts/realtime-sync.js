@@ -2,7 +2,7 @@ import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
 import {state} from "./script-core";
 import { mindmapId } from "./init";
 
-const svg = shadowRoot.getElementById('mindmap');;
+//const svg = shadowRoot.getElementById('mindmap');;
 
 let socket;
 let allNodesRef = [];

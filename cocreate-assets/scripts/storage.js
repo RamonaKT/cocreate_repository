@@ -3,16 +3,23 @@ let saveTimeout;
 import { io } from "https://cdn.socket.io/4.8.0/socket.io.esm.min.js";
 // ----------- NEU ENDE -------------- //
 
-const svg = shadowRoot.getElementById('mindmap');
+//const svg = shadowRoot.getElementById('mindmap');
 
 import { supabase } from '../../supabase/client.js';
 import { mindmapId } from "./init";
 
+import { getSVG } from './nodes.js';
+
 export function getSVGSource() {
+
+  const svg = getSVG();
+  if (!svg) {
+    console.error("SVG ist noch nicht initialisiert.");
+    return "";
+  }
   const serializer = new XMLSerializer();
   return serializer.serializeToString(svg);
 }
-
 
 export async function saveCurrentMindmap() {
   const title = prompt("Titel eingeben:");
