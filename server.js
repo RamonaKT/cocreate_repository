@@ -4,6 +4,8 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 
+import fetch from 'node-fetch'; // oben mit den Imports einfügen
+
 
 import { dirname } from 'path';
 
@@ -176,6 +178,25 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Socket.IO Server läuft auf http://0.0.0.0:${PORT}`);
 });*/
+
+
+app.get('/proxy/component.js', async (req, res) => {
+  try {
+    const response = await fetch('http://141.72.13.151:8200/component.js');
+
+    if (!response.ok) {
+      return res.status(response.status).send(`Upstream error: ${response.statusText}`);
+    }
+
+    const content = await response.text();
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(content);
+  } catch (error) {
+    console.error('Proxy-Fehler:', error);
+    res.status(500).send('Proxy konnte Datei nicht laden.');
+  }
+});
+
 
 const PORT = 8200;
 server.listen(PORT, '0.0.0.0', () => {
