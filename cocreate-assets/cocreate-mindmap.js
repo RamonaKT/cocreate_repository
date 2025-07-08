@@ -16,19 +16,17 @@ export class CoCreateMindmap extends HTMLElement {
 
     const container = document.createElement('div');
     container.innerHTML = `
-      <div id="toolbar">
-        <div class="node-template" draggable="true" data-type="1">Ebene 1</div>
-        <div class="node-template" draggable="true" data-type="2">Ebene 2</div>
-        <div class="node-template" draggable="true" data-type="3">Ebene 3</div>
-      </div>
-
       <div id="mindmap-container">
+        <div id="toolbar">
+          <div class="node-template" draggable="true" data-type="1">Ebene 1</div>
+          <div class="node-template" draggable="true" data-type="2">Ebene 2</div>
+          <div class="node-template" draggable="true" data-type="3">Ebene 3</div>
+        </div>
         <div id="sidebar-left" class="sidebar">
           <img src="cocreate-assets/img/icon-manual.png" alt="Icon manual"
             style="cursor: pointer;" draggable="false" 
             onclick="this.getRootNode().getElementById('dialogIconManual').showModal()">
-
-          <dialog part="dialoge" id="dialogIconManual">
+          <dialog id="dialogIconManual">
             <h2>Quick-Start manuell</h2>
             <p>save to open new mindmap. everyone needs access to server. share id. have fun.</p>
             <button class="close" draggable="false"
@@ -38,8 +36,7 @@ export class CoCreateMindmap extends HTMLElement {
           <img src="cocreate-assets/img/icon-overview.png" alt="Icon overview user"
             style="cursor: pointer;" draggable="false" 
             onclick="this.getRootNode().getElementById('dialogIconOverviewUser').showModal(); window.loadUsersForCurrentMindmap(this.getRootNode());">
-
-          <dialog part="dialoge" id="dialogIconOverviewUser">
+          <dialog id="dialogIconOverviewUser">
             <h2>User-Overview</h2>
             <div id="userListContainer"></div>
             <button class="close" 

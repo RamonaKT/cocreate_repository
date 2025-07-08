@@ -3,7 +3,15 @@
     --color-level-2: #a4a9ea;
     --color-level-3: #ced2ff;
     --cocreate-main-color: var(--secondary-main-color);
-    --cocreate-dialog-background-color: var(--dialog-background-color)
+    --cocreate-highlight-color: yellow;
+    --cocreate-admin-color: gold;
+    --cocreate-radius-large: 1.25rem;
+    --cocreate-radius-small: 0.625rem;
+    --cocreate-font-size-base: 1rem;
+    --cocreate-font-size-small: 0.875rem;
+    --cocreate-font-size-large: 1.25rem;
+    --cocreate-padding: 0.625rem;
+    --cocreate-margin: 0.625rem;
 }
 
 h2 {
@@ -15,30 +23,32 @@ dialog {
     margin: 0;
     top:10vh;
     left:1vw;
-    background-color: var(--cocreate-dialog-background-color);
+    background:rgb(226, 253, 253);
 }
 
 button {
   background-color: var(--cocreate-main-color);
+  border-radius: var(--cocreate-radius-large);
+  color: black;
 }
 
 #sidebar-left {
-    margin-right: 10px;
-    max-width: 75px;
+    margin-right: var(--cocreate-margin);
+    max-width: 4.6875rem;;
     background-color:transparent;
     position: absolute;
     left: 1vw;
-    top: 10vh;
+    top: 8vh;
     width: 25vh;
-    padding: 10px;
+    padding: var(--cocreate-padding);
     text-align: left;
     overflow-y: auto;
-    font-size: 14px;
+    font-size: var(--cocreate-font-size-small);
 }
 
 .sidebar img {
-    height: 75px;
-    width: 75px;
+    height: 4.6875rem;;
+    width: 4.6875rem;;
     border-radius: 15%;
 }
 
@@ -48,35 +58,35 @@ button {
     display: flex;
     justify-content: center;
     gap: 10%;
-    padding: 10px;
+    padding: var(--cocreate-padding);
     background: transparent;
     height: 6vh;
     right: 1vw;
-    top:10vh;
+    top:8vh;
 }
 
 .node-template {
     width: 17vh;
     height: 5vh;
-    border-radius: 15px;
-    border: 2px solid black;
+    border-radius: var(--cocreate-radius-large);
+    border: 0.125rem solid black;
     color: black;
-    line-height: 40px;
+    line-height: 2.5rem;
     cursor: grab;
     user-select: none;
     font-size: 1.5vh;
-    font-size: 20px;
+    font-size: var(--cocreate-font-size-large);
     text-align: center;
-}
 
-.node-template[data-type="1"] {
-    background: var(--color-level-1);
+  &[data-type="1"] {
+      background: var(--color-level-1);
+  }
+  &[data-type="2"] {
+      background: var(--color-level-2);
+  }
+  &[data-type="3"] {
+      background: var(--color-level-3);
 }
-.node-template[data-type="2"] {
-    background: var(--color-level-2);
-}
-.node-template[data-type="3"] {
-    background: var(--color-level-3);
 }
 
 
@@ -86,7 +96,7 @@ button {
 #mindmap-container {
     display: flex;
     justify-content: center;
-    margin: 10px;
+    margin: var(--cocreate-margin);
     height: 85vh;
 }
 
@@ -94,12 +104,12 @@ button {
 #mindmap{
     height: 100%;
     width: 100%;
-    margin-top: 3vh;
-    border: 2px solid black;
+    margin-top: var(--cocreate-margin);
+    border: 0.125rem solid black;
 }
 
 svg {
-    border: 1px solid #ccc;
+    border: 0.0625rem solid #ccc;
     background: white;
     overflow: scroll;
     object-view-box: 50 50;
@@ -121,15 +131,11 @@ svg {
 
 
 .draggable ellipse.highlighted,
-.draggable rect.highlighted {
-    stroke: yellow;
-    stroke-width: 3;
-}
-
+.draggable rect.highlighted,
 .connection-line.highlighted {
-    stroke: yellow ;
+    stroke: var(--cocreate-highlight-color);
     stroke-width: 3; /* größer für Hervorhebung */
-    filter: drop-shadow(0 0 5px yellow);
+    filter: drop-shadow(0 0 5px var(--cocreate-highlight-color));
 }
 
 
@@ -141,19 +147,19 @@ foreignObject input {
     margin: 0;
     background: white;
     color: black;
-    font-size: 12px;
+    font-size: 0.75rem;
     text-align: center;
     font-family: sans-serif;
     outline: none;
-    border-radius: 20px;
+    border-radius: var(--cocreate-radius-large);
 }
 
 .badge.admin {
-  background-color: gold;
+  background-color: var(--cocreate-admin-color);
   color: black;
-  padding: 2px 6px;
-  margin-left: 10px;
-  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
+  margin-left: var(--cocreate-margin);
+  border-radius: var(--cocreate-radius-small);
   font-weight: bold;
   font-size: 0.8em;
 }
@@ -169,23 +175,23 @@ foreignObject input {
   z-index: 9999;
 
  .overlay-box {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  min-width: 300px;
-  text-align: center;
-}
+    background: white;
+    padding: var(--cocreate-padding);
+    border-radius: var(--cocreate-radius-large);
+    min-width: 18.75rem;
+    text-align: center;
+  }
 
-.overlay-buttons {
-  display: flex;
-  justify-content: center;
-  margin-top: 15px;
-  gap: 10px;
-}
+  .overlay-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--cocreate-margin);
+    gap: var(--cocreate-margin);
+  }
 
- button {
-  padding: 8px 16px;
-}
+  button {
+    padding: 0.5rem 1rem;
+  }
 }
 
 /* Modal-Overlay */
@@ -203,21 +209,21 @@ foreignObject input {
 
   .modal-content {
   background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 300px;
+  padding: var(--cocreate-padding);
+  border-radius: var(--cocreate-radius-large);
+  width: 18.75rem;
   text-align: center;
-}
+  }
 
- input {
+  input {
   width: 90%;
-  padding: 8px;
+  padding: 0.5rem;
   text-align: center;         /* Text im Feld linksbündig */
   margin: 0 auto;           /* zentriert das Feld horizontal */
   display: block;
-}
+  }
 
   button {
-  margin-top: 10px;
-}
+  margin-top: var(--cocreate-margin);
+  }
 }
